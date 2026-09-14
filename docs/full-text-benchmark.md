@@ -20,7 +20,7 @@ BASELINE_ENGINES="luxir opensearch elasticsearch" scripts/run-baseline.sh
 ```
 
 The default baseline also runs facet and collection tasks against the same
-index. This document covers the 45 primary full-text cells. The executable presets in
+index. This document covers the 60 primary full-text cells. The executable presets in
 `python/presets.py` and the result JSON are authoritative for an individual
 run; environment or parameter overrides define a different run posture.
 
@@ -305,7 +305,7 @@ side and scanning a large term range that yields few survivors on the other:
 
 - `wildcard`: luceneutil's `Wildcard` tasks, high-frequency stems with an
   interior `*` (`th*e`). Expansion- and postings-dominated: on the 10M
-  corpus `th*e` counts 8.3M documents in tens of milliseconds.
+  corpus `th*e` matches 8.3M documents.
 - `prefix3`: luceneutil's `Prefix3` tasks, three-character prefixes (`mos*`).
   Pure subtree expansion, no filtering.
 - `wildcard_scan`: derived, a LowTerm's first letter and last four letters
@@ -313,8 +313,8 @@ side and scanning a large term range that yields few survivors on the other:
   first-letter subtree under a suffix accept and keeps little of it.
 - `wildcard_lead`: derived, a leading star before a LowTerm's last five
   letters (`*sband`). No engine gets a seekable prefix, so the whole term
-  dictionary is visited; on the 10M corpus these cost roughly 0.4-0.6 s
-  almost independently of how few documents they match.
+  dictionary is visited and the cost is nearly independent of how few
+  documents match.
 - `regex`: a curated pattern set (luceneutil has no regexp task), chosen so
   automaton structure decides how much of the scanned range the engine's
   term-dictionary intersection can skip. The ladder runs from
