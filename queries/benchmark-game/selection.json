@@ -1,0 +1,691 @@
+{
+  "schema_version": 2,
+  "method": "exact hit-count agreement across all engines and corpora",
+  "corpora": {
+    "standard": {
+      "documents": 10000000,
+      "variant": "full",
+      "sha256": "b15e60ad32a0e9f09f3be5335db86ccd885e1be1418086a906d68529e6ec1c9d"
+    },
+    "scale": {
+      "documents": 33332620,
+      "variant": "text",
+      "sha256": "cfb51997db26f04081934c8e926562dab04bb4239f6f30b13b374b46757763aa"
+    }
+  },
+  "analyzers": {
+    "luxir": {
+      "tokenizer": "unicode_word",
+      "filters": [
+        "lowercase"
+      ]
+    },
+    "opensearch": {
+      "analyzer": "standard",
+      "search_analyzer": "standard"
+    },
+    "elasticsearch": {
+      "analyzer": "standard",
+      "search_analyzer": "standard"
+    }
+  },
+  "reference_versions": {
+    "opensearch": "3.7.0",
+    "elasticsearch": "9.4.2"
+  },
+  "luxir_binary_sha256": "2258997d07e0f4f003cf9fc4a033b7132d5984e62f1e670007206dbb5adcadae",
+  "source": {
+    "file": "queries-all.txt",
+    "queries": 1010,
+    "sha256": "60791982c474bc3efbda87bad22f3b0803a2ee42093ced1d5136ef2fbecae396",
+    "class_counts": {
+      "boosted": 28,
+      "intersection": 300,
+      "intersection_union": 40,
+      "negated": 19,
+      "phrase": 300,
+      "sloppy_phrase": 20,
+      "term": 1,
+      "two_phase": 1,
+      "union": 301
+    }
+  },
+  "selection": {
+    "queries": 978,
+    "sha256": "d4b9983aa61f63e372380b86486928f3e60d65bbf403a2294f5daa6cd2b164c7",
+    "class_counts": {
+      "boosted": 25,
+      "intersection": 300,
+      "intersection_union": 40,
+      "negated": 19,
+      "phrase": 299,
+      "sloppy_phrase": 20,
+      "term": 1,
+      "two_phase": 1,
+      "union": 273
+    }
+  },
+  "rejected": [
+    {
+      "query": "vicenza italy",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 114960,
+          "opensearch": 114960,
+          "elasticsearch": 114960
+        },
+        "scale": {
+          "luxir": 339341,
+          "opensearch": 339343,
+          "elasticsearch": 339343
+        }
+      }
+    },
+    {
+      "query": "french culinary institute",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 386042,
+          "opensearch": 386042,
+          "elasticsearch": 386042
+        },
+        "scale": {
+          "luxir": 996767,
+          "opensearch": 996768,
+          "elasticsearch": 996768
+        }
+      }
+    },
+    {
+      "query": "italian translation",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 156131,
+          "opensearch": 156131,
+          "elasticsearch": 156131
+        },
+        "scale": {
+          "luxir": 422658,
+          "opensearch": 422659,
+          "elasticsearch": 422659
+        }
+      }
+    },
+    {
+      "query": "san francisco",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 205625,
+          "opensearch": 205629,
+          "elasticsearch": 205629
+        },
+        "scale": {
+          "luxir": 564009,
+          "opensearch": 564013,
+          "elasticsearch": 564013
+        }
+      }
+    },
+    {
+      "query": "region iv",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 294561,
+          "opensearch": 294562,
+          "elasticsearch": 294562
+        },
+        "scale": {
+          "luxir": 821466,
+          "opensearch": 821467,
+          "elasticsearch": 821467
+        }
+      }
+    },
+    {
+      "query": "jesus as a child",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 7072895,
+          "opensearch": 7072898,
+          "elasticsearch": 7072898
+        },
+        "scale": {
+          "luxir": 20544413,
+          "opensearch": 20544420,
+          "elasticsearch": 20544420
+        }
+      }
+    },
+    {
+      "query": "chicago bulls",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 123730,
+          "opensearch": 123730,
+          "elasticsearch": 123730
+        },
+        "scale": {
+          "luxir": 330499,
+          "opensearch": 330500,
+          "elasticsearch": 330500
+        }
+      }
+    },
+    {
+      "query": "tallest trees in the world",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8662629,
+          "opensearch": 8662629,
+          "elasticsearch": 8662629
+        },
+        "scale": {
+          "luxir": 26162977,
+          "opensearch": 26162980,
+          "elasticsearch": 26162980
+        }
+      }
+    },
+    {
+      "query": "international baseball",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 508570,
+          "opensearch": 508572,
+          "elasticsearch": 508572
+        },
+        "scale": {
+          "luxir": 1433182,
+          "opensearch": 1433187,
+          "elasticsearch": 1433187
+        }
+      }
+    },
+    {
+      "query": "time for kids",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 4796537,
+          "opensearch": 4796538,
+          "elasticsearch": 4796538
+        },
+        "scale": {
+          "luxir": 14505299,
+          "opensearch": 14505300,
+          "elasticsearch": 14505300
+        }
+      }
+    },
+    {
+      "query": "calvin klein",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 17159,
+          "opensearch": 17160,
+          "elasticsearch": 17160
+        },
+        "scale": {
+          "luxir": 50580,
+          "opensearch": 50581,
+          "elasticsearch": 50581
+        }
+      }
+    },
+    {
+      "query": "national book award",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1412909,
+          "opensearch": 1412909,
+          "elasticsearch": 1412909
+        },
+        "scale": {
+          "luxir": 3802993,
+          "opensearch": 3802994,
+          "elasticsearch": 3802994
+        }
+      }
+    },
+    {
+      "query": "pump it up",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3178482,
+          "opensearch": 3178485,
+          "elasticsearch": 3178485
+        },
+        "scale": {
+          "luxir": 9882188,
+          "opensearch": 9882194,
+          "elasticsearch": 9882194
+        }
+      }
+    },
+    {
+      "query": "\"cherry blossom\"",
+      "class": "phrase",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 633,
+          "opensearch": 633,
+          "elasticsearch": 633
+        },
+        "scale": {
+          "luxir": 1783,
+          "opensearch": 1782,
+          "elasticsearch": 1782
+        }
+      }
+    },
+    {
+      "query": "time in denver",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 7460557,
+          "opensearch": 7460557,
+          "elasticsearch": 7460557
+        },
+        "scale": {
+          "luxir": 22410588,
+          "opensearch": 22410592,
+          "elasticsearch": 22410592
+        }
+      }
+    },
+    {
+      "query": "david kim",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 320623,
+          "opensearch": 320623,
+          "elasticsearch": 320623
+        },
+        "scale": {
+          "luxir": 874208,
+          "opensearch": 874212,
+          "elasticsearch": 874212
+        }
+      }
+    },
+    {
+      "query": "zion national park",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 873075,
+          "opensearch": 873075,
+          "elasticsearch": 873075
+        },
+        "scale": {
+          "luxir": 2473819,
+          "opensearch": 2473820,
+          "elasticsearch": 2473820
+        }
+      }
+    },
+    {
+      "query": "care a lot",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 6574210,
+          "opensearch": 6574214,
+          "elasticsearch": 6574214
+        },
+        "scale": {
+          "luxir": 19048343,
+          "opensearch": 19048351,
+          "elasticsearch": 19048351
+        }
+      }
+    },
+    {
+      "query": "chicago teachers union",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 353650,
+          "opensearch": 353650,
+          "elasticsearch": 353650
+        },
+        "scale": {
+          "luxir": 921761,
+          "opensearch": 921762,
+          "elasticsearch": 921762
+        }
+      }
+    },
+    {
+      "query": "kansas city kings",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 828758,
+          "opensearch": 828758,
+          "elasticsearch": 828758
+        },
+        "scale": {
+          "luxir": 2102181,
+          "opensearch": 2102182,
+          "elasticsearch": 2102182
+        }
+      }
+    },
+    {
+      "query": "ambassador of italy",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8205298,
+          "opensearch": 8205298,
+          "elasticsearch": 8205298
+        },
+        "scale": {
+          "luxir": 23922536,
+          "opensearch": 23922538,
+          "elasticsearch": 23922538
+        }
+      }
+    },
+    {
+      "query": "internet fraud",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 97241,
+          "opensearch": 97254,
+          "elasticsearch": 97254
+        },
+        "scale": {
+          "luxir": 297413,
+          "opensearch": 297454,
+          "elasticsearch": 297454
+        }
+      }
+    },
+    {
+      "query": "city in iran",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 7464525,
+          "opensearch": 7464531,
+          "elasticsearch": 7464531
+        },
+        "scale": {
+          "luxir": 21836237,
+          "opensearch": 21836269,
+          "elasticsearch": 21836269
+        }
+      }
+    },
+    {
+      "query": "becoming a widow",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 6569692,
+          "opensearch": 6569696,
+          "elasticsearch": 6569696
+        },
+        "scale": {
+          "luxir": 19027769,
+          "opensearch": 19027777,
+          "elasticsearch": 19027777
+        }
+      }
+    },
+    {
+      "query": "king kalakaua",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 250379,
+          "opensearch": 250379,
+          "elasticsearch": 250379
+        },
+        "scale": {
+          "luxir": 549569,
+          "opensearch": 549570,
+          "elasticsearch": 549570
+        }
+      }
+    },
+    {
+      "query": "national security cutter",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 753116,
+          "opensearch": 753116,
+          "elasticsearch": 753116
+        },
+        "scale": {
+          "luxir": 2142738,
+          "opensearch": 2142739,
+          "elasticsearch": 2142739
+        }
+      }
+    },
+    {
+      "query": "chicago public schools",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 589419,
+          "opensearch": 589419,
+          "elasticsearch": 589419
+        },
+        "scale": {
+          "luxir": 1546341,
+          "opensearch": 1546342,
+          "elasticsearch": 1546342
+        }
+      }
+    },
+    {
+      "query": "laborers international union of north america",
+      "class": "union",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8336862,
+          "opensearch": 8336862,
+          "elasticsearch": 8336862
+        },
+        "scale": {
+          "luxir": 24335963,
+          "opensearch": 24335964,
+          "elasticsearch": 24335964
+        }
+      }
+    },
+    {
+      "query": "a search engine is an information retrieval software system designed to help find information stored on one or more computer systems",
+      "class": "union",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8219591,
+          "opensearch": 8219593,
+          "elasticsearch": 8219593
+        },
+        "scale": {
+          "luxir": 25695052,
+          "opensearch": 25695066,
+          "elasticsearch": 25695066
+        }
+      }
+    },
+    {
+      "query": "french^4 culinary institute",
+      "class": "boosted",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 386042,
+          "opensearch": 386042,
+          "elasticsearch": 386042
+        },
+        "scale": {
+          "luxir": 996767,
+          "opensearch": 996768,
+          "elasticsearch": 996768
+        }
+      }
+    },
+    {
+      "query": "san^8 francisco",
+      "class": "boosted",
+      "mismatched_corpora": [
+        "standard",
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 205625,
+          "opensearch": 205629,
+          "elasticsearch": 205629
+        },
+        "scale": {
+          "luxir": 564009,
+          "opensearch": 564013,
+          "elasticsearch": 564013
+        }
+      }
+    },
+    {
+      "query": "laborers international^2 union of north america^0.5",
+      "class": "boosted",
+      "mismatched_corpora": [
+        "scale"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8336862,
+          "opensearch": 8336862,
+          "elasticsearch": 8336862
+        },
+        "scale": {
+          "luxir": 24335963,
+          "opensearch": 24335964,
+          "elasticsearch": 24335964
+        }
+      }
+    }
+  ]
+}

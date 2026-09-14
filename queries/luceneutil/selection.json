@@ -1,0 +1,1683 @@
+{
+  "schema_version": 2,
+  "method": "exact hit-count agreement across all engines and corpora",
+  "corpora": {
+    "standard": {
+      "documents": 10000000,
+      "variant": "full",
+      "sha256": "b15e60ad32a0e9f09f3be5335db86ccd885e1be1418086a906d68529e6ec1c9d"
+    }
+  },
+  "analyzers": {
+    "luxir": {
+      "tokenizer": "unicode_word",
+      "filters": [
+        "lowercase"
+      ]
+    },
+    "opensearch": {
+      "analyzer": "standard",
+      "search_analyzer": "standard"
+    },
+    "elasticsearch": {
+      "analyzer": "standard",
+      "search_analyzer": "standard"
+    }
+  },
+  "reference_versions": {
+    "opensearch": "3.7.0",
+    "elasticsearch": "9.4.2"
+  },
+  "luxir_binary_sha256": "f1df5f280afe811037b3e750c794e24d4e24d0dd7fc37280e9d9c94684ed028f",
+  "source": {
+    "file": "queries-all.txt",
+    "queries": 940,
+    "sha256": "f479ff68c52fa928373f7ae7f2e7ce2395c73796521f4bfe5fc5490317935643",
+    "class_counts": {
+      "and_high_high": 50,
+      "and_high_low": 50,
+      "and_high_med": 50,
+      "high_phrase": 36,
+      "high_sloppy_phrase": 36,
+      "high_term": 50,
+      "low_phrase": 50,
+      "low_sloppy_phrase": 50,
+      "low_term": 50,
+      "med_phrase": 50,
+      "med_sloppy_phrase": 50,
+      "med_term": 50,
+      "or_high_high": 50,
+      "or_high_low": 50,
+      "or_high_med": 50,
+      "prefix3": 50,
+      "regex": 18,
+      "wildcard": 50,
+      "wildcard_lead": 50,
+      "wildcard_scan": 50
+    }
+  },
+  "selection": {
+    "queries": 826,
+    "sha256": "2218c7bc6491e6c1da865409a2932eb471f404a4e3f8d94bd097ada8543e2bae",
+    "class_counts": {
+      "and_high_high": 47,
+      "and_high_low": 50,
+      "and_high_med": 50,
+      "high_phrase": 30,
+      "high_sloppy_phrase": 7,
+      "high_term": 45,
+      "low_phrase": 50,
+      "low_sloppy_phrase": 37,
+      "low_term": 47,
+      "med_phrase": 46,
+      "med_sloppy_phrase": 27,
+      "med_term": 49,
+      "or_high_high": 42,
+      "or_high_low": 46,
+      "or_high_med": 45,
+      "prefix3": 50,
+      "regex": 13,
+      "wildcard": 49,
+      "wildcard_lead": 47,
+      "wildcard_scan": 49
+    }
+  },
+  "rejected": [
+    {
+      "query": "a",
+      "class": "high_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 6560526,
+          "opensearch": 6560530,
+          "elasticsearch": 6560530
+        }
+      }
+    },
+    {
+      "query": "it",
+      "class": "high_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2675549,
+          "opensearch": 2675552,
+          "elasticsearch": 2675552
+        }
+      }
+    },
+    {
+      "query": "an",
+      "class": "high_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2628055,
+          "opensearch": 2628056,
+          "elasticsearch": 2628056
+        }
+      }
+    },
+    {
+      "query": "be",
+      "class": "high_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2051701,
+          "opensearch": 2051702,
+          "elasticsearch": 2051702
+        }
+      }
+    },
+    {
+      "query": "he",
+      "class": "high_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1659433,
+          "opensearch": 1659434,
+          "elasticsearch": 1659434
+        }
+      }
+    },
+    {
+      "query": "de",
+      "class": "med_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 652241,
+          "opensearch": 652242,
+          "elasticsearch": 652242
+        }
+      }
+    },
+    {
+      "query": "jan",
+      "class": "low_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 81865,
+          "opensearch": 81866,
+          "elasticsearch": 81866
+        }
+      }
+    },
+    {
+      "query": "jim",
+      "class": "low_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 81241,
+          "opensearch": 81243,
+          "elasticsearch": 81243
+        }
+      }
+    },
+    {
+      "query": "latin",
+      "class": "low_term",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 80386,
+          "opensearch": 80387,
+          "elasticsearch": 80387
+        }
+      }
+    },
+    {
+      "query": "+i +10",
+      "class": "and_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 107901,
+          "opensearch": 107904,
+          "elasticsearch": 107904
+        }
+      }
+    },
+    {
+      "query": "+also +no",
+      "class": "and_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 191096,
+          "opensearch": 191097,
+          "elasticsearch": 191097
+        }
+      }
+    },
+    {
+      "query": "+other +no",
+      "class": "and_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 191780,
+          "opensearch": 191781,
+          "elasticsearch": 191781
+        }
+      }
+    },
+    {
+      "query": "be 2009",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2799078,
+          "opensearch": 2799079,
+          "elasticsearch": 2799079
+        }
+      }
+    },
+    {
+      "query": "he had",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2436176,
+          "opensearch": 2436177,
+          "elasticsearch": 2436177
+        }
+      }
+    },
+    {
+      "query": "states i",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1931034,
+          "opensearch": 1931062,
+          "elasticsearch": 1931062
+        }
+      }
+    },
+    {
+      "query": "it url",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3815892,
+          "opensearch": 3815894,
+          "elasticsearch": 3815894
+        }
+      }
+    },
+    {
+      "query": "it work",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3264803,
+          "opensearch": 3264806,
+          "elasticsearch": 3264806
+        }
+      }
+    },
+    {
+      "query": "be had",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2977860,
+          "opensearch": 2977861,
+          "elasticsearch": 2977861
+        }
+      }
+    },
+    {
+      "query": "an 2009",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3292830,
+          "opensearch": 3292831,
+          "elasticsearch": 3292831
+        }
+      }
+    },
+    {
+      "query": "it but",
+      "class": "or_high_high",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3432015,
+          "opensearch": 3432018,
+          "elasticsearch": 3432018
+        }
+      }
+    },
+    {
+      "query": "be important",
+      "class": "or_high_med",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2177914,
+          "opensearch": 2177915,
+          "elasticsearch": 2177915
+        }
+      }
+    },
+    {
+      "query": "he artist",
+      "class": "or_high_med",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1832698,
+          "opensearch": 1832699,
+          "elasticsearch": 1832699
+        }
+      }
+    },
+    {
+      "query": "that ii",
+      "class": "or_high_med",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3180225,
+          "opensearch": 3180228,
+          "elasticsearch": 3180228
+        }
+      }
+    },
+    {
+      "query": "not put",
+      "class": "or_high_med",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1800738,
+          "opensearch": 1800739,
+          "elasticsearch": 1800739
+        }
+      }
+    },
+    {
+      "query": "no april",
+      "class": "or_high_med",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1567866,
+          "opensearch": 1567867,
+          "elasticsearch": 1567867
+        }
+      }
+    },
+    {
+      "query": "he user\\:gamaliel",
+      "class": "or_high_low",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1661208,
+          "opensearch": 1661209,
+          "elasticsearch": 1661209
+        }
+      }
+    },
+    {
+      "query": "a youngstown",
+      "class": "or_high_low",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 6561388,
+          "opensearch": 6561392,
+          "elasticsearch": 6561392
+        }
+      }
+    },
+    {
+      "query": "i abode",
+      "class": "or_high_low",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 957833,
+          "opensearch": 957861,
+          "elasticsearch": 957861
+        }
+      }
+    },
+    {
+      "query": "no greenway",
+      "class": "or_high_low",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1047040,
+          "opensearch": 1047041,
+          "elasticsearch": 1047041
+        }
+      }
+    },
+    {
+      "query": "\"in the\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3645826,
+          "opensearch": 3645828,
+          "elasticsearch": 3645828
+        }
+      }
+    },
+    {
+      "query": "\"for the\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1361049,
+          "opensearch": 1361048,
+          "elasticsearch": 1361048
+        }
+      }
+    },
+    {
+      "query": "\"as a\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1050026,
+          "opensearch": 1050025,
+          "elasticsearch": 1050025
+        }
+      }
+    },
+    {
+      "query": "\"it is\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 732516,
+          "opensearch": 732517,
+          "elasticsearch": 732517
+        }
+      }
+    },
+    {
+      "query": "\"is the\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 643237,
+          "opensearch": 643236,
+          "elasticsearch": 643236
+        }
+      }
+    },
+    {
+      "query": "\"with a\"",
+      "class": "high_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 543259,
+          "opensearch": 543258,
+          "elasticsearch": 543258
+        }
+      }
+    },
+    {
+      "query": "\"and a\"",
+      "class": "med_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 477757,
+          "opensearch": 477756,
+          "elasticsearch": 477756
+        }
+      }
+    },
+    {
+      "query": "\"ref ref\"",
+      "class": "med_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 416369,
+          "opensearch": 416367,
+          "elasticsearch": 416367
+        }
+      }
+    },
+    {
+      "query": "\"ref in\"",
+      "class": "med_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 307995,
+          "opensearch": 307996,
+          "elasticsearch": 307996
+        }
+      }
+    },
+    {
+      "query": "\"by a\"",
+      "class": "med_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 291595,
+          "opensearch": 291594,
+          "elasticsearch": 291594
+        }
+      }
+    },
+    {
+      "query": "\"of the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 6696325,
+          "opensearch": 6696318,
+          "elasticsearch": 6696318
+        }
+      }
+    },
+    {
+      "query": "\"in the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 5203321,
+          "opensearch": 5203316,
+          "elasticsearch": 5203316
+        }
+      }
+    },
+    {
+      "query": "\"to the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 4120969,
+          "opensearch": 4120958,
+          "elasticsearch": 4120958
+        }
+      }
+    },
+    {
+      "query": "\"on the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2462080,
+          "opensearch": 2462075,
+          "elasticsearch": 2462075
+        }
+      }
+    },
+    {
+      "query": "\"and the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 4753191,
+          "opensearch": 4753195,
+          "elasticsearch": 4753195
+        }
+      }
+    },
+    {
+      "query": "\"for the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2426510,
+          "opensearch": 2426504,
+          "elasticsearch": 2426504
+        }
+      }
+    },
+    {
+      "query": "\"at the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1704521,
+          "opensearch": 1704524,
+          "elasticsearch": 1704524
+        }
+      }
+    },
+    {
+      "query": "\"by the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1956682,
+          "opensearch": 1956673,
+          "elasticsearch": 1956673
+        }
+      }
+    },
+    {
+      "query": "\"is a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1715946,
+          "opensearch": 1715948,
+          "elasticsearch": 1715948
+        }
+      }
+    },
+    {
+      "query": "\"from the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1661755,
+          "opensearch": 1661758,
+          "elasticsearch": 1661758
+        }
+      }
+    },
+    {
+      "query": "\"with the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1853957,
+          "opensearch": 1853938,
+          "elasticsearch": 1853938
+        }
+      }
+    },
+    {
+      "query": "\"as a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1355463,
+          "opensearch": 1355459,
+          "elasticsearch": 1355459
+        }
+      }
+    },
+    {
+      "query": "\"ref cite\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1571111,
+          "opensearch": 1571113,
+          "elasticsearch": 1571113
+        }
+      }
+    },
+    {
+      "query": "\"as the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2140050,
+          "opensearch": 2140052,
+          "elasticsearch": 2140052
+        }
+      }
+    },
+    {
+      "query": "\"to be\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1160875,
+          "opensearch": 1160874,
+          "elasticsearch": 1160874
+        }
+      }
+    },
+    {
+      "query": "\"in a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2421320,
+          "opensearch": 2421307,
+          "elasticsearch": 2421307
+        }
+      }
+    },
+    {
+      "query": "\"of a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3416611,
+          "opensearch": 3416605,
+          "elasticsearch": 3416605
+        }
+      }
+    },
+    {
+      "query": "\"ref http\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1535027,
+          "opensearch": 1535032,
+          "elasticsearch": 1535032
+        }
+      }
+    },
+    {
+      "query": "\"the first\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1030209,
+          "opensearch": 1030206,
+          "elasticsearch": 1030206
+        }
+      }
+    },
+    {
+      "query": "\"it is\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 825803,
+          "opensearch": 825804,
+          "elasticsearch": 825804
+        }
+      }
+    },
+    {
+      "query": "\"web url\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 751155,
+          "opensearch": 751152,
+          "elasticsearch": 751152
+        }
+      }
+    },
+    {
+      "query": "\"is the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2544434,
+          "opensearch": 2544426,
+          "elasticsearch": 2544426
+        }
+      }
+    },
+    {
+      "query": "\"the united\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 743469,
+          "opensearch": 743467,
+          "elasticsearch": 743467
+        }
+      }
+    },
+    {
+      "query": "\"it was\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 647340,
+          "opensearch": 647339,
+          "elasticsearch": 647339
+        }
+      }
+    },
+    {
+      "query": "\"one of\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 775713,
+          "opensearch": 775712,
+          "elasticsearch": 775712
+        }
+      }
+    },
+    {
+      "query": "\"ref the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1940428,
+          "opensearch": 1940422,
+          "elasticsearch": 1940422
+        }
+      }
+    },
+    {
+      "query": "\"that the\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1605247,
+          "opensearch": 1605250,
+          "elasticsearch": 1605250
+        }
+      }
+    },
+    {
+      "query": "\"with a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1007820,
+          "opensearch": 1007818,
+          "elasticsearch": 1007818
+        }
+      }
+    },
+    {
+      "query": "\"was a\"~4",
+      "class": "high_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1196476,
+          "opensearch": 1196471,
+          "elasticsearch": 1196471
+        }
+      }
+    },
+    {
+      "query": "\"and a\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2142707,
+          "opensearch": 2142702,
+          "elasticsearch": 2142702
+        }
+      }
+    },
+    {
+      "query": "\"for a\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1144269,
+          "opensearch": 1144264,
+          "elasticsearch": 1144264
+        }
+      }
+    },
+    {
+      "query": "\"was the\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2537884,
+          "opensearch": 2537883,
+          "elasticsearch": 2537883
+        }
+      }
+    },
+    {
+      "query": "\"to a\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1966467,
+          "opensearch": 1966466,
+          "elasticsearch": 1966466
+        }
+      }
+    },
+    {
+      "query": "\"the new\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 757869,
+          "opensearch": 757866,
+          "elasticsearch": 757866
+        }
+      }
+    },
+    {
+      "query": "\"part of\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 457401,
+          "opensearch": 457400,
+          "elasticsearch": 457400
+        }
+      }
+    },
+    {
+      "query": "\"ref ref\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 814371,
+          "opensearch": 814372,
+          "elasticsearch": 814372
+        }
+      }
+    },
+    {
+      "query": "\"of his\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 645520,
+          "opensearch": 645519,
+          "elasticsearch": 645519
+        }
+      }
+    },
+    {
+      "query": "\"after the\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 633750,
+          "opensearch": 633749,
+          "elasticsearch": 633749
+        }
+      }
+    },
+    {
+      "query": "\"on a\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 835290,
+          "opensearch": 835288,
+          "elasticsearch": 835288
+        }
+      }
+    },
+    {
+      "query": "\"ref in\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1137729,
+          "opensearch": 1137728,
+          "elasticsearch": 1137728
+        }
+      }
+    },
+    {
+      "query": "\"into the\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 470122,
+          "opensearch": 470124,
+          "elasticsearch": 470124
+        }
+      }
+    },
+    {
+      "query": "\"as an\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 418841,
+          "opensearch": 418840,
+          "elasticsearch": 418840
+        }
+      }
+    },
+    {
+      "query": "\"by a\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 738633,
+          "opensearch": 738626,
+          "elasticsearch": 738626
+        }
+      }
+    },
+    {
+      "query": "\"a new\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 405970,
+          "opensearch": 405969,
+          "elasticsearch": 405969
+        }
+      }
+    },
+    {
+      "query": "\"and was\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 1028231,
+          "opensearch": 1028232,
+          "elasticsearch": 1028232
+        }
+      }
+    },
+    {
+      "query": "\"date of\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 369631,
+          "opensearch": 369630,
+          "elasticsearch": 369630
+        }
+      }
+    },
+    {
+      "query": "\"is not\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 350319,
+          "opensearch": 350318,
+          "elasticsearch": 350318
+        }
+      }
+    },
+    {
+      "query": "\"university of\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 349054,
+          "opensearch": 349053,
+          "elasticsearch": 349053
+        }
+      }
+    },
+    {
+      "query": "\"out of\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 324476,
+          "opensearch": 324475,
+          "elasticsearch": 324475
+        }
+      }
+    },
+    {
+      "query": "\"the world\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 485653,
+          "opensearch": 485650,
+          "elasticsearch": 485650
+        }
+      }
+    },
+    {
+      "query": "\"in his\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 661769,
+          "opensearch": 661771,
+          "elasticsearch": 661771
+        }
+      }
+    },
+    {
+      "query": "\"2011 ref\"~4",
+      "class": "med_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 415540,
+          "opensearch": 415539,
+          "elasticsearch": 415539
+        }
+      }
+    },
+    {
+      "query": "\"is preserved\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 89650,
+          "opensearch": 89651,
+          "elasticsearch": 89651
+        }
+      }
+    },
+    {
+      "query": "\"the village\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 106457,
+          "opensearch": 106459,
+          "elasticsearch": 106459
+        }
+      }
+    },
+    {
+      "query": "\"in 2006\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 169950,
+          "opensearch": 169946,
+          "elasticsearch": 169946
+        }
+      }
+    },
+    {
+      "query": "\"for this\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 201062,
+          "opensearch": 201061,
+          "elasticsearch": 201061
+        }
+      }
+    },
+    {
+      "query": "\"not to\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 374647,
+          "opensearch": 374646,
+          "elasticsearch": 374646
+        }
+      }
+    },
+    {
+      "query": "\"used as\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 113151,
+          "opensearch": 113152,
+          "elasticsearch": 113152
+        }
+      }
+    },
+    {
+      "query": "\"a series\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 138137,
+          "opensearch": 138133,
+          "elasticsearch": 138133
+        }
+      }
+    },
+    {
+      "query": "\"town of\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 158060,
+          "opensearch": 158061,
+          "elasticsearch": 158061
+        }
+      }
+    },
+    {
+      "query": "\"the us\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 135033,
+          "opensearch": 135031,
+          "elasticsearch": 135031
+        }
+      }
+    },
+    {
+      "query": "\"of it\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 591945,
+          "opensearch": 591946,
+          "elasticsearch": 591946
+        }
+      }
+    },
+    {
+      "query": "\"links commons\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 76135,
+          "opensearch": 76136,
+          "elasticsearch": 76136
+        }
+      }
+    },
+    {
+      "query": "\"the uk\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 118366,
+          "opensearch": 118367,
+          "elasticsearch": 118367
+        }
+      }
+    },
+    {
+      "query": "\"the local\"~4",
+      "class": "low_sloppy_phrase",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 132040,
+          "opensearch": 132039,
+          "elasticsearch": 132039
+        }
+      }
+    },
+    {
+      "query": "ti*e",
+      "class": "wildcard",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3261098,
+          "opensearch": 3261099,
+          "elasticsearch": 3261099
+        }
+      }
+    },
+    {
+      "query": "e*ring",
+      "class": "wildcard_scan",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 134168,
+          "opensearch": 134169,
+          "elasticsearch": 134169
+        }
+      }
+    },
+    {
+      "query": "*ities",
+      "class": "wildcard_lead",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 734524,
+          "opensearch": 734525,
+          "elasticsearch": 734525
+        }
+      }
+    },
+    {
+      "query": "*ister",
+      "class": "wildcard_lead",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 311035,
+          "opensearch": 311039,
+          "elasticsearch": 311039
+        }
+      }
+    },
+    {
+      "query": "*ering",
+      "class": "wildcard_lead",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 446574,
+          "opensearch": 446575,
+          "elasticsearch": 446575
+        }
+      }
+    },
+    {
+      "query": "(inter|under)[a-z]*",
+      "class": "regex",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 2163035,
+          "opensearch": 2163050,
+          "elasticsearch": 2163050
+        }
+      }
+    },
+    {
+      "query": "[aeiou]{2}[a-z]*",
+      "class": "regex",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 5894408,
+          "opensearch": 5894413,
+          "elasticsearch": 5894413
+        }
+      }
+    },
+    {
+      "query": ".*ing",
+      "class": "regex",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 7326123,
+          "opensearch": 7326125,
+          "elasticsearch": 7326125
+        }
+      }
+    },
+    {
+      "query": ".*[0-9]",
+      "class": "regex",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 8761910,
+          "opensearch": 8761911,
+          "elasticsearch": 8761911
+        }
+      }
+    },
+    {
+      "query": ".*qu.*",
+      "class": "regex",
+      "mismatched_corpora": [
+        "standard"
+      ],
+      "counts": {
+        "standard": {
+          "luxir": 3231070,
+          "opensearch": 3231073,
+          "elasticsearch": 3231073
+        }
+      }
+    }
+  ]
+}

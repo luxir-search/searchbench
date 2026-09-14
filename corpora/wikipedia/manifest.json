@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "name": "luceneutil English Wikipedia 1 KB line documents",
+  "source_project": "luceneutil",
+  "source_project_url": "https://github.com/mikemccand/luceneutil",
+  "source_artifact": "enwiki-20120502-lines-1k-fixed-utf8-with-random-label.txt.lzma",
+  "source_file": "enwiki-20120502-lines-1k-fixed-utf8-with-random-label.txt.lzma",
+  "source_url": "https://pub-6de3254d7180436684278e0ec33ada22.r2.dev/enwiki-20120502-lines-1k-fixed-utf8-with-random-label.txt.lzma",
+  "source_format": "luceneutil-line-docs",
+  "content_origin": "English Wikipedia dump dated 2012-05-02",
+  "content_license_url": "https://en.wikipedia.org/wiki/Wikipedia:Copyrights",
+  "source_bytes": 6299260005,
+  "source_sha256": "f3c18abca52f479ad29b427b6e7f7d453867dfc3e25546922fae855868d2936f",
+  "source_documents": 33332620,
+  "line_document_max_characters": 1024,
+  "lanes": {
+    "smoke": {
+      "documents": 100000,
+      "variant": "full"
+    },
+    "standard": {
+      "documents": 10000000,
+      "variant": "full"
+    },
+    "facet": {
+      "documents": 10000000,
+      "variant": "facet"
+    },
+    "scale": {
+      "documents": 33332620,
+      "variant": "text"
+    }
+  }
+}

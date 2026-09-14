@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "project": "luceneutil",
+  "project_url": "https://github.com/mikemccand/luceneutil",
+  "license": "Apache-2.0",
+  "commit": "3cfd163094feda7ef5ab14d89a095e4e523c33f2",
+  "file": "tasks/wikimedium.10M.tasks",
+  "url": "https://raw.githubusercontent.com/mikemccand/luceneutil/3cfd163094feda7ef5ab14d89a095e4e523c33f2/tasks/wikimedium.10M.tasks",
+  "bytes": 692295,
+  "sha256": "e8166233f415b9bb735618f3a5f5205e25cf1d6b86d1e6647176288b05d0271a",
+  "derivation": {
+    "ordering": "source order within the declared class order",
+    "limit_per_class": 50,
+    "term_translation": "escape expression-parser metacharacters while preserving the task operator",
+    "derived_classes": "wildcard_scan and wildcard_lead: LowTerm affixes around a star, so scanned terms dominate matched terms; regex: curated automaton-structure ladder",
+    "queries": 940
+  }
+}

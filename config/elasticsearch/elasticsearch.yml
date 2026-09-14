@@ -1,0 +1,11 @@
+cluster.name: searchbench-elasticsearch
+node.name: searchbench-elasticsearch-1
+discovery.type: single-node
+network.host: 127.0.0.1
+http.port: 9202
+transport.port: 9302
+path.data: ${SEARCHBENCH_DATA}
+path.logs: ${SEARCHBENCH_ROOT}/logs/elasticsearch
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+xpack.ml.enabled: false

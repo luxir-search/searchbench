@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "project": "search-benchmark-game",
+  "project_url": "https://github.com/quickwit-oss/search-benchmark-game",
+  "license": "MIT",
+  "commit": "ac0a1aa7ff1d9eb95562ad36a8229f28c83c11c1",
+  "file": "queries.txt",
+  "url": "https://raw.githubusercontent.com/quickwit-oss/search-benchmark-game/ac0a1aa7ff1d9eb95562ad36a8229f28c83c11c1/queries.txt",
+  "bytes": 82954,
+  "sha256": "a8e8f2c1a4bede53063de22fb13be83b585683da1c28208da4921de73ce254bd",
+  "queries": 962,
+  "derivation": {
+    "ordering": "the upstream file verbatim as lines 1-962, followed by the Searchbench additions",
+    "additions": {
+      "sloppy_phrase": 20,
+      "boosted_mandatory": 11,
+      "boosted_optional": 17
+    },
+    "queries": 1010
+  }
+}

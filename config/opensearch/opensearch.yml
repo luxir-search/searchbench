@@ -1,0 +1,9 @@
+cluster.name: searchbench-opensearch
+node.name: searchbench-opensearch-1
+discovery.type: single-node
+network.host: 127.0.0.1
+http.port: 9201
+transport.port: 9301
+path.data: ${SEARCHBENCH_DATA}
+path.logs: ${SEARCHBENCH_ROOT}/logs/opensearch
+plugins.security.disabled: true

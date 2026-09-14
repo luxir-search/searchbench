@@ -1,0 +1,21 @@
+# Per-box state: indexes, results, logs, downloaded/unpacked engines, corpora.
+# Re-materialize with engines/download.sh + scripts/prepare-corpus.sh.
+data/
+# ...and when data/ is a symlink to a scratch filesystem, which a trailing
+# slash does not match.
+/data
+logs/
+results/
+run/
+corpus/
+# perf(1) profiles dropped by a benchmarking run.
+perf-*.data
+engines/cache/
+engines/opensearch-*
+engines/elasticsearch-*
+engines/*.log
+__pycache__/
+*.pyc
+# Machine-generated engine keystores (created at first engine start)
+config/*/opensearch.keystore
+config/*/elasticsearch.keystore
