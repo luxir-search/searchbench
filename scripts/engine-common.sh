@@ -33,6 +33,14 @@ ensure_driver() {
   [[ -x "$binary" ]] || "$ROOT/scripts/build-driver.sh"
 }
 
+# One control per Luxir serving posture, after its measured search cells.
+# Reuse the same live server, CPU split, namespace, and replay executable.
+record_health_control() {
+  [[ "$1" == luxir ]] || return 0
+  python3 "$ROOT/python/controls.py" "$1" --server-pid "$2" --port "$3" \
+    --outdir "$4" --variant "${5:--}" --server-cores "$SERVER_CORES"
+}
+
 corpus_sha256() {
   local corpus=$1 sidecar="$1.sha256" digest computed=0
   if [[ -s "$sidecar" && "$sidecar" -nt "$corpus" ]]; then

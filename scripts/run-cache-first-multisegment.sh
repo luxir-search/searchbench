@@ -188,6 +188,7 @@ run_engine() {
   for task in "${TASKS[@]}"; do
     run_cell "$engine" "$port" "$pid" "$task"
   done
+  record_health_control "$engine" "$pid" "$port" "$OUTDIR"
   stop_selected_engine "$engine"
   ACTIVE_ENGINE=
 }

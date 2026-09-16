@@ -30,6 +30,15 @@ repetitions, eight concurrent HTTP connections, one replay event-loop thread,
 sequential query order, and a one-second connection warmup after validation.
 These short defaults are iteration settings, not publication-duration claims.
 
+Each Luxir serving configuration also ends with a fixed transport control:
+`GET /health`, 32 connections, four replay threads, one second of connection
+warmup, and three 10-second repetitions. It uses the same live server, native
+replay executable, CPU sets, and network namespace. Its median QPS and range
+appear separately in the report, with OS and binary provenance, to expose
+client/network drift across runs. This endpoint does no index work but still
+includes Luxir HTTP handling. Search QPS is not rescaled by the control. See
+the [control workflow](../README.md#luxir-healthcheck-control) for custom runs.
+
 ## Process and node settings
 
 | Setting | Luxir | OpenSearch | Elasticsearch | Reason |

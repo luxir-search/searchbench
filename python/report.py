@@ -16,7 +16,8 @@ import shlex
 import sys
 
 from adapters import ENGINES
-from presets import FULL_TEXT_TASKS, TASKS
+from controls import health_control_lines
+from presets import FULL_TEXT_TASKS, PRESETS, TASKS
 from request_capture import captured_http_lines, request_shape_label
 from results_io import load_result
 import variants as variants_module
@@ -88,7 +89,7 @@ def load_results(directory):
             continue
         engine = value.get("engine")
         task = value.get("task_class")
-        if engine in ENGINES and task in TASKS:
+        if engine in ENGINES and task in PRESETS:
             results[(engine, task, variant_key(value.get("variant")))] = value
     return results
 
@@ -599,6 +600,8 @@ def main():
              "The same corpus, resolved task parameters, replay driver, and HTTP transport "
              "are used for Luxir, OpenSearch, and Elasticsearch.", ""]
     lines += corpus_lines(results)
+    if any(engine == "luxir" for engine, _task, _variant in results):
+        lines += [""] + health_control_lines(args.directory, queries=list(results.values()))
     drift = undeclared_variation(results)
     if drift:
         lines += ["", "## Undeclared variation", "",

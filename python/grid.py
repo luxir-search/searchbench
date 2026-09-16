@@ -18,6 +18,7 @@ import sys
 
 from adapters import ENGINES, facet_metrics, facet_order, make_adapter
 from cpu_layout import current_cpu_sets, format_cpu_list
+from controls import health_control_lines, record_health_control
 from presets import (GRID_NAMES, GRID_SELECTIVITIES, GRIDS, NUMERIC_COLUMNS,
                      STRING_COLUMNS, designated_values, grid_columns, param_hash,
                      resolve, resolve_grid_cell)
@@ -540,6 +541,9 @@ def run_engine(args):
                     failures += 1
         else:
             failures += 1
+    failures += record_health_control(args.engine, args.server_pid, args.port,
+                                      args.outdir, server_cores=args.server_cores,
+                                      host=args.host)
     return 1 if failures else 0
 
 
@@ -970,6 +974,10 @@ def render(args):
                                         cardinalities=args.cardinalities)
     markdown = render_tables(args.grid, results, engines, args.lane, report, prev,
                              args.collection, args.cardinalities, base_results)
+    controls = health_control_lines(args.outdir, expected="luxir" in engines,
+                                    queries=list(results.values()))
+    if controls:
+        markdown += "\n" + "\n".join(controls) + "\n"
     output = Path(args.output or Path(args.outdir) / report_name(args.grid))
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(markdown, encoding="utf-8")

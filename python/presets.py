@@ -184,7 +184,10 @@ for density, upper in (("90", 90_000), ("1", 1_000)):
         STABLE_FILTER_TASKS.append(name)
 STABLE_FILTER_TASKS = tuple(STABLE_FILTER_TASKS)
 
-TASKS = tuple(PRESETS)
+# Controls use the same validation/replay path, but are not search workloads
+# or cross-engine cells. Luxir's health endpoint does no index work.
+CONTROL_PRESETS = {"HEALTH": {"shape": "health"}}
+TASKS = tuple(PRESETS) + tuple(CONTROL_PRESETS)
 
 
 def parse_override(text):
@@ -257,9 +260,10 @@ def resolve(task, count_mode, overrides=None):
     sugar for filter_field/filter_value on the corpus selectivity fields and
     expands here so param_hash covers the canonical form.
     """
-    if task not in PRESETS:
+    if task not in PRESETS and task not in CONTROL_PRESETS:
         raise ValueError(f"unknown preset {task!r}")
-    params = dict(PRESETS[task], count_mode=count_mode)
+    params = dict((PRESETS if task in PRESETS else CONTROL_PRESETS)[task],
+                  count_mode=count_mode)
     if overrides:
         if params["shape"] == "mix":
             raise ValueError("MIX takes no overrides; vary its component presets instead")

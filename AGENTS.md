@@ -26,6 +26,13 @@ benchmark definition.
 - Check result errors, count agreement, and recorded provenance before calling
   a campaign successful. Some existing campaign scripts continue after a
   failed cell, so a zero campaign exit status alone is insufficient.
+- Full Luxir query campaigns include the c32/t4 `GET /health` control described
+  in [README.md](README.md#luxir-healthcheck-control). Keep it in the same
+  namespace, CPU policy, and live-server session. For a new/custom campaign,
+  use `record_health_control` from `scripts/engine-common.sh` after each serving
+  configuration's query cells and before shutdown. Preserve `controls/` and
+  its context files with the report; check that its QPS is present and valid.
+  Treat it as a transport control, not an automatic search-QPS correction.
 
 Harness checks: `python3 -m unittest discover -s python -p 'test_*.py'`.
 Namespace integration tests need Linux with unprivileged user/network

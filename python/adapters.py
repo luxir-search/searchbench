@@ -319,6 +319,11 @@ class LuxirAdapter(BaseAdapter):
     inert_params = frozenset({"request_cache"})
     _fail_rules = (("present", b'"error"'),)
 
+    def fail_rules(self, shape):
+        if shape == "health":
+            return self._fail_rules + (("absent", b'"status":"ok"'),)
+        return super().fail_rules(shape)
+
     def build_field_probe(self, field):
         top = {"query": {"all": True}, "limit": 0, "get_number": True,
                "ops": {"facet": {"field_facet": {"field": field, "limit": 1}}}}
@@ -382,6 +387,8 @@ class LuxirAdapter(BaseAdapter):
             segments, shard_count=1, active_merges=index.get("active_merges", 0))
 
     def build(self, params, item):
+        if params["shape"] == "health":
+            return Request("GET", "/health", b"", params.get("name", "HEALTH"), item.text)
         if params["shape"] == "get":
             return self.build_get(params, item)
         top = {"query": {"all": True} if params.get("match_all") else luxir_query_clause(item),
@@ -502,6 +509,10 @@ class LuxirAdapter(BaseAdapter):
 
     def validate(self, params, raw, item=None):
         self.check(raw)
+        if params["shape"] == "health":
+            if json.loads(raw).get("status") != "ok":
+                raise RuntimeError("Luxir health response is not ok")
+            return None
         name = params.get("name", params["shape"])
         # A response may stream as multiple NDJSON lines (batched doc lists
         # with more:true); aggregate docs and ops across all of them.

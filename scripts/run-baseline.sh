@@ -103,6 +103,8 @@ run_engine() {
         || { "$ROOT/scripts/stop-$engine.sh"; return 1; }
     fi
     run_cells "$engine" "$pid" "$port" "$posture_specs"
+    record_health_control "$engine" "$pid" "$port" "$OUTDIR" "${posture_specs%% *}" \
+      || echo "FAILED: $engine health control" >&2
     "$ROOT/scripts/stop-$engine.sh"
   done
 }

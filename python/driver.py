@@ -20,8 +20,8 @@ import time
 from adapters import DEFAULT_PORTS, ENGINES, make_adapter
 from cpu_layout import current_cpu_sets, format_cpu_list
 from network_namespace import network_namespace
-from presets import TASKS, comparable_hash, param_hash, parse_override, resolve
-from query_source import read_id_batches, searchbench_queries
+from presets import PRESETS, TASKS, comparable_hash, param_hash, parse_override, resolve
+from query_source import QueryItem, read_id_batches, searchbench_queries
 from request_capture import capture_request
 from results_io import write_context
 from sampler import ProcSampler
@@ -66,6 +66,9 @@ def parse_cores(spec):
 
 def make_workload(task, params, pools, max_queries, adapter, corpus=None):
     """Workload entries are (resolved_params, query_item)."""
+    if params["shape"] == "health":
+        return [(dict(params, name=task), QueryItem("/health", "health", (), "control"))]
+
     def pool_for(name, preset_params):
         pool = pools["count"] if preset_params["limit"] == 0 else pools["top"]
         query_class = preset_params.get("query_class")
@@ -230,6 +233,7 @@ def run_replay(root, args, adapter, shape, blob_path, driver_output):
     if not binary.is_file() or not os.access(binary, os.X_OK):
         raise RuntimeError(
             f"C++ replay driver is not executable: {binary}; build driver/bench_replay first")
+    executable = source_file_config(binary.resolve())
     command = [
         str(binary),
         "--workload", str(blob_path),
@@ -269,6 +273,7 @@ def run_replay(root, args, adapter, shape, blob_path, driver_output):
             f"stderr={completed.stderr[-1000:]!r}") from error
     if result.get("schema") != "sbdriver-1":
         raise RuntimeError(f"unexpected replay schema: {result.get('schema')!r}")
+    result["executable"] = executable
     return result
 
 
@@ -330,6 +335,13 @@ def read_text(path):
         return Path(path).read_text(encoding="utf-8").strip()
     except OSError:
         return None
+
+
+def server_session(pid):
+    # Start ticks disambiguate PID reuse; boot ID disambiguates machine boots.
+    fields = Path(f"/proc/{pid}/stat").read_text().rpartition(")")[2].split()
+    return {"pid": pid, "start_ticks": int(fields[19]),
+            "boot_id": read_text("/proc/sys/kernel/random/boot_id")}
 
 
 def corpus_config(path):
@@ -524,10 +536,12 @@ async def async_main(args):
         if args.task != "MIX":
             raise ValueError("--mix-slots is only valid with the MIX task")
         slots = [slot.strip() for slot in args.mix_slots.split(",") if slot.strip()]
-        if not slots or any(slot not in TASKS or slot == "MIX" for slot in slots):
+        if not slots or any(slot not in PRESETS or slot == "MIX" for slot in slots):
             raise ValueError("--mix-slots must name one or more non-MIX presets")
         params["slots"] = slots
-    pools = None if params["shape"] == "get" else searchbench_queries(args.queries)
+    indexed = params["shape"] != "health"
+    pools = (None if params["shape"] in ("get", "health")
+             else searchbench_queries(args.queries))
     adapter = make_adapter(args.engine, args.collection)
     workload = make_workload(
         args.task, params, pools, args.max_queries, adapter, args.corpus)
@@ -558,8 +572,10 @@ async def async_main(args):
         # interval. A benchmark over a changing segment set is not one stable
         # workload, even when both endpoint samples happen to have the same
         # scalar segment count.
-        topology_before = index_topology(adapter, args.host, args.port, args.timeout)
-        assert_quiescent_topology(topology_before, args.expected_segments)
+        topology_before = (index_topology(adapter, args.host, args.port, args.timeout)
+                           if indexed else {})
+        if indexed:
+            assert_quiescent_topology(topology_before, args.expected_segments)
         if declared_topology is not None:
             assert_topology(declared_topology, topology_before)
         sampler = ProcSampler(args.server_pid, timeline)
@@ -569,7 +585,8 @@ async def async_main(args):
                 root, args, adapter, params["shape"], blob_path, driver_output)
         finally:
             memory = sampler.stop()
-        topology_after = index_topology(adapter, args.host, args.port, args.timeout)
+        topology_after = (index_topology(adapter, args.host, args.port, args.timeout)
+                          if indexed else {})
 
     expected_buckets = {str(index): label for index, label in enumerate(bucket_labels)}
     if replay["workload"]["buckets"] != expected_buckets:
@@ -656,15 +673,19 @@ async def async_main(args):
         # reports no bound (luxir counts exactly).
         "facet_accuracy": {"max_doc_count_error_upper_bound": adapter.facet_error},
         "inert_params": sorted(adapter.inert_params),
-        "corpus": corpus_config(args.corpus),
+        "corpus": corpus_config(args.corpus) if indexed else None,
         "core_split": {"server": args.server_cores, "client": args.client_cores,
                        "client_allowed_before": sorted(allowed_before),
                        "client_allowed_after": sorted(os.sched_getaffinity(0))},
         "engine_config": engine_config,
+        "server_session": server_session(args.server_pid),
         "host": host_config(args.server_pid),
         # Recorded as run environment whether or not this task's requests read
         # it (get/match-all cells), so one run yields one context.
-        "source_files": {"queries": source_file_config(args.queries)},
+        "source_files": {
+            "replay_driver": replay["executable"],
+            **({"queries": source_file_config(args.queries)} if indexed else {}),
+        },
         "index_topology": {
             "name": args.topology_name,
             "expected_segments": args.expected_segments,
@@ -724,7 +745,8 @@ async def async_main(args):
         # The canonical serving snapshot lives in the context; the passing
         # cell records the live-compared verdict, and only the rare unstable
         # cell inlines both samples (it fails anyway, verbosity is fine).
-        "index_topology": ({"stable": True} if topology_stable else
+        "index_topology": ({"applicable": False} if not indexed else
+                           {"stable": True} if topology_stable else
                            {"stable": False, "before": topology_before,
                             "after": topology_after}),
         # Warmup doubles as the validation phase (full parse + per-task payload
@@ -820,6 +842,11 @@ def main():
         parser.error("--duration and --warmup-seconds must be non-negative")
     if args.expected_segments is not None and args.expected_segments < 1:
         parser.error("--expected-segments must be positive")
+    if args.task == "HEALTH":
+        if args.engine != "luxir":
+            parser.error("HEALTH is a Luxir transport control")
+        if args.expected_segments is not None or args.topology_name:
+            parser.error("HEALTH does not access an index or serving topology")
     if args.topology_name:
         declared = resolve_topology(args.topology_name)
         if (args.expected_segments is not None

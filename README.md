@@ -192,6 +192,51 @@ board; retain host-network diagnostics in separate result directories.
 Reports warn when network modes differ, including a mixture of isolated
 results and historical results with no recorded network mode.
 
+## Luxir healthcheck control
+
+Full Luxir query campaigns automatically measure `GET /health` after each
+serving configuration finishes its search cells, before stopping the server.
+This applies to the standard and benchmark-game baselines, cache-first
+multi-segment campaigns, and each grid. The control uses **32 connections and
+four replay threads**, one second of connection warmup, and **three 10-second
+measured repetitions**. These settings are fixed independently of the search
+cell variants and their duration. Quick iteration and smoke checks do not add
+this control.
+
+`REPORT.md` (or the grid's report) includes a **Luxir transport control
+(c32/t4)** section with median QPS, the repetition min/max, replay CPU use,
+network mode, CPU assignments, OS version, and replay/Luxir binary hashes.
+Raw results and per-repetition data live under `controls/` beside the report.
+A missing control is shown as not recorded; a failed control is marked FAIL.
+The control must follow the reported cells and match their Luxir process
+session, binary hashes, CPU assignments, OS, and network setup. Stale or
+mismatched controls are marked UNMATCHED, with the reason in the report.
+Control rows do not enter the search comparisons, variant columns, or
+exact-count agreement tables.
+
+Health requests use the same replay executable, HTTP connection handling,
+CPU assignments, network namespace, and running Luxir server as the query
+cells. The endpoint performs no index work. This provides a control for
+client and kernel/network changes across runs, while also including Luxir's
+HTTP handling cost. Compare the raw control QPS across runs alongside the
+search results; it is not a universal scaling factor for CPU-bound search.
+The report does not automatically rescale search timings.
+
+For a custom full campaign, call the shared helper inside the same namespace
+after its Luxir cells and before server shutdown:
+
+```bash
+source scripts/engine-common.sh
+record_health_control luxir "$pid" 9400 "$outdir"
+```
+
+An optional fifth argument is the campaign's variant specification; only its
+server settings are retained, since the control fixes the client to c32/t4.
+The helper records failures and returns nonzero if the control fails. Existing
+controls are archived before a rerun so an old successful QPS cannot mask a
+new failure. As with every measurement, keep the host CPU policy fixed until
+the control finishes.
+
 ## Choose a corpus
 
 The normal commands prepare their default corpus automatically. They can also
