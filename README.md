@@ -35,10 +35,12 @@ The default commands run Luxir only. Prepare the standard 10M-document corpus,
 build a fresh Luxir index, and run the baseline with:
 
 ```bash
-scripts/run-baseline.sh
+scripts/setup.sh --standard
+scripts/run-isolated.sh scripts/run-baseline.sh
 ```
 
-The corpus is prepared automatically on first use, and an existing index is
+Prepare downloads and the corpus before entering the isolated network (see
+[isolated network runs](#isolated-network-runs)). An existing index is
 reused whenever its recorded corpus hash and physical index layout version
 match; `BASELINE_REFEED=1` forces a fresh feed (for example, to time
 indexing itself). The standard query baseline force-merges each engine to
@@ -53,12 +55,13 @@ rather than displacing one another. `BASELINE_TOPOLOGY` runs the same task
 board over a declared topology instead of the force-merged default:
 
 ```bash
-BASELINE_TOPOLOGY=tiered-45 scripts/run-baseline.sh
-scripts/quick.sh -T tiered-45 -t HIGH_TERM_TOP_10
+BASELINE_TOPOLOGY=tiered-45 scripts/run-isolated.sh scripts/run-baseline.sh
+scripts/run-isolated.sh scripts/quick.sh -T tiered-45 -t HIGH_TERM_TOP_10
 ```
 
 ```bash
-scripts/quick.sh -t HIGH_PHRASE_TOP_10,MED_SLOPPY_PHRASE_TOP_10,AND_HIGH_LOW_COUNT
+scripts/run-isolated.sh scripts/quick.sh \
+  -t HIGH_PHRASE_TOP_10,MED_SLOPPY_PHRASE_TOP_10,AND_HIGH_LOW_COUNT
 ```
 
 Experiment dimensions are declared variants (`python/variants.py`):
@@ -71,9 +74,10 @@ report pivots the variant axis into column groups while warning about any
 recorded configuration difference no variant declares:
 
 ```bash
-BASELINE_VARIANTS="concurrency=1 concurrency=8 concurrency=16" scripts/run-baseline.sh
-scripts/quick.sh -t HIGH_TERM_TOP_10 -v concurrency=1 -v - -v concurrency=16
-scripts/quick.sh -t FACET_10 -v facet_limit=100
+BASELINE_VARIANTS="concurrency=1 concurrency=8 concurrency=16" \
+  scripts/run-isolated.sh scripts/run-baseline.sh
+scripts/run-isolated.sh scripts/quick.sh -t HIGH_TERM_TOP_10 -v concurrency=1 -v - -v concurrency=16
+scripts/run-isolated.sh scripts/quick.sh -t FACET_10 -v facet_limit=100
 ```
 
 The default full-text cells use luceneutil's term, AND, OR, phrase, and sloppy
@@ -81,7 +85,7 @@ phrase tasks split by source-corpus frequency. The older broad AOL-derived
 query-shape workload is retained as a separate secondary campaign:
 
 ```bash
-scripts/run-benchmark-game.sh
+scripts/run-isolated.sh scripts/run-benchmark-game.sh
 ```
 
 Its results use a separate output directory and are not combined with the
@@ -95,10 +99,10 @@ syntax as `quick.sh`. The smaller `tiered-5` mechanism check remains available
 through `-T`:
 
 ```bash
-scripts/run-cache-first-multisegment.sh -d 5 -r 1
-scripts/run-cache-first-multisegment.sh -e elasticsearch \
+scripts/run-isolated.sh scripts/run-cache-first-multisegment.sh -d 5 -r 1
+scripts/run-isolated.sh scripts/run-cache-first-multisegment.sh -e elasticsearch \
   -t FILTERED_RANGE_90_AND_HIGH_MED_TOP_10,HIGH_TERM_COUNT -d 5 -r 1
-scripts/run-cache-first-multisegment.sh -T tiered-5 -d 5 -r 1
+scripts/run-isolated.sh scripts/run-cache-first-multisegment.sh -T tiered-5 -d 5 -r 1
 ```
 
 The lane verifies the complete declared document distribution after every
@@ -113,13 +117,80 @@ Download the pinned OpenSearch and Elasticsearch distributions, then include
 them in a smoke or baseline campaign:
 
 ```bash
-scripts/setup.sh --references
+scripts/setup.sh --standard --references
 SMOKE_ENGINES=luxir,opensearch,elasticsearch scripts/smoke.sh
-BASELINE_ENGINES="luxir opensearch elasticsearch" scripts/run-baseline.sh
+BASELINE_ENGINES="luxir opensearch elasticsearch" \
+  scripts/run-isolated.sh scripts/run-baseline.sh
 ```
 
 The reference downloads are lazy, so `scripts/start-opensearch.sh` or
 `scripts/start-elasticsearch.sh` also downloads its missing distribution.
+
+## Isolated network runs
+
+Use `scripts/run-isolated.sh COMMAND ...` for performance measurements. It
+creates a fresh Linux user/network namespace, brings up only loopback, and
+runs the command with the caller's existing UID/GID. There is no hardcoded UID
+and no sudo requirement. Engines, replay clients, ingestion, and health checks
+must all run inside this invocation. Their `127.0.0.1` is independent of the
+host's loopback, firewall rules, and container NAT/connection-tracking hooks.
+Files, host PID numbers, CPU affinity, and the existing indices are retained.
+
+Requirements: Linux 5.3 or newer with unprivileged user/network namespaces enabled,
+util-linux (`unshare`, `setpriv`), iproute2 (`ip`), and Python 3.9 or newer.
+Setup fails if isolation is unavailable; it never falls back to host
+networking. Host firewall/container services need no changes.
+
+The namespace has no external network connection. Build and prepare the
+needed corpora and distributions first, then select a new output directory:
+
+```bash
+scripts/setup.sh --standard --references
+BASELINE_ENGINES="luxir opensearch elasticsearch" \
+BASELINE_OUTDIR="$PWD/results/baseline-exact-netns-$(date -u +%Y%m%dT%H%M%SZ)" \
+  scripts/run-isolated.sh scripts/run-baseline.sh
+```
+
+Other campaign environment variables work unchanged. Stop any existing
+Searchbench engines first. Only one campaign may use a checkout at a time:
+data, logs, configuration, and PID files are shared. The wrapper refuses
+existing engine PID files and overlapping isolated invocations. On command
+exit, failure, SIGINT, or SIGTERM it stops any remaining namespace processes
+(SIGTERM, then SIGKILL after 10 seconds) and clears their engine PID files.
+Once the last process exits, the namespace disappears. SIGKILL of the wrapper
+cannot run cleanup; inspect lingering processes/PID files before another run.
+
+`quick.sh` normally leaves engines running. Through the wrapper they stop
+when the wrapped command exits. To reuse one engine for multiple commands,
+enter `scripts/run-isolated.sh bash`, run the commands inside that shell, then
+exit it. Wrapping only `run-driver.sh` cannot reach a host-network engine.
+
+CPU/power policy is separate and must be set and restored on the host, outside
+the namespace. For the development hosts that provide `agent_do`, use an
+outer shell with a cleanup trap (after setup/downloads):
+
+```bash
+(
+  set -e
+  trap 'sudo -n /usr/local/sbin/agent_do idle_settings' EXIT
+  sudo -n /usr/local/sbin/agent_do benchmark_settings
+  BASELINE_ENGINES="luxir opensearch elasticsearch" \
+  BASELINE_OUTDIR="$PWD/results/baseline-exact-netns-$(date -u +%Y%m%dT%H%M%SZ)" \
+    scripts/run-isolated.sh scripts/run-baseline.sh
+)
+```
+
+On other machines use their normal CPU-policy controls. Keep explicit core
+sets and CPU/cache settings consistent across compared runs. Result context
+JSON records `host.network.mode`, `host.network.client_namespace`, and
+`host.network.server_namespace` from the observed client/server processes.
+An unwrapped run is recorded as `unmanaged`, since it may itself be inside a
+container or externally managed namespace. Namespace IDs are local runtime
+identifiers, not portable configuration identities. Rerun every compared
+engine under the same network setup before publishing an isolated-network
+board; retain host-network diagnostics in separate result directories.
+Reports warn when network modes differ, including a mixture of isolated
+results and historical results with no recorded network mode.
 
 ## Choose a corpus
 

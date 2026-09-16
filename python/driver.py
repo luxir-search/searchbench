@@ -19,6 +19,7 @@ import time
 
 from adapters import DEFAULT_PORTS, ENGINES, make_adapter
 from cpu_layout import current_cpu_sets, format_cpu_list
+from network_namespace import network_namespace
 from presets import TASKS, comparable_hash, param_hash, parse_override, resolve
 from query_source import read_id_batches, searchbench_queries
 from request_capture import capture_request
@@ -362,17 +363,26 @@ def source_file_config(path):
             "sha256": file_sha256(source)}
 
 
-def host_config():
+def host_config(server_pid=None):
     governors = set()
     for path in Path("/sys/devices/system/cpu").glob("cpu*/cpufreq/scaling_governor"):
         value = read_text(path)
         if value:
             governors.add(value)
     swaps = read_text("/proc/swaps") or ""
+    namespace = network_namespace()
     return {"hostname": platform.node(), "platform": platform.platform(),
             "machine": platform.machine(), "python": platform.python_version(),
             "cpu_count": os.cpu_count(), "cpu_governors": sorted(governors),
-            "swap_enabled": len(swaps.splitlines()) > 1, "proc_swaps": swaps.splitlines()}
+            "swap_enabled": len(swaps.splitlines()) > 1, "proc_swaps": swaps.splitlines(),
+            "network": {
+                "mode": (os.environ.get("SEARCHBENCH_NETWORK_MODE", "unmanaged")
+                         if os.environ.get("SEARCHBENCH_NETWORK_NAMESPACE")
+                         == namespace else "unmanaged"),
+                "client_namespace": namespace,
+                "server_namespace": (network_namespace(server_pid)
+                                     if server_pid is not None else None),
+            }}
 
 
 def process_startup_config(engine, pid):
@@ -651,7 +661,7 @@ async def async_main(args):
                        "client_allowed_before": sorted(allowed_before),
                        "client_allowed_after": sorted(os.sched_getaffinity(0))},
         "engine_config": engine_config,
-        "host": host_config(),
+        "host": host_config(args.server_pid),
         # Recorded as run environment whether or not this task's requests read
         # it (get/match-all cells), so one run yields one context.
         "source_files": {"queries": source_file_config(args.queries)},

@@ -15,8 +15,9 @@ parsing, collection, response encoding, and transport.
 The three-engine development baseline is started with:
 
 ```bash
-scripts/setup.sh --references
-BASELINE_ENGINES="luxir opensearch elasticsearch" scripts/run-baseline.sh
+scripts/setup.sh --standard --references
+BASELINE_ENGINES="luxir opensearch elasticsearch" \
+  scripts/run-isolated.sh scripts/run-baseline.sh
 ```
 
 The default baseline also runs facet and collection tasks against the same
@@ -36,11 +37,16 @@ These short defaults are iteration settings, not publication-duration claims.
 | Nodes | 1 | 1 | 1 | Compare a local, non-distributed search path. |
 | Search partitions | one local collection | 1 primary shard | 1 primary shard | Avoid distributed fan-out and reduction. |
 | Replicas | not implemented | 0 | 0 | Do not charge replication to a read benchmark. |
-| Network | localhost | localhost | localhost | Keep transport local and reproducible. |
+| Network | isolated loopback | isolated loopback | isolated loopback | Use one fresh network namespace per campaign to exclude host firewall and container-networking overhead. |
 | Security | none | disabled | disabled | Authentication is outside the measured operation. |
 | Storage | filesystem | Lucene filesystem index | Lucene filesystem index | Use each engine's normal persistent local backend. |
 | Managed heap | none | 8 GiB fixed JVM heap | 8 GiB fixed JVM heap | Give both JVM references the same explicit heap; total and anonymous RSS are recorded for all engines. |
 | Open files | at least 65,536 soft | at least 65,536 soft | at least 65,536 soft | Prevent the launching shell's limit from becoming a scale-ingest failure. |
+
+See the [isolated-network workflow](../README.md#isolated-network-runs) for
+preparation, process cleanup, CPU policy, and recorded network provenance.
+Run every compared engine under the same network setup; old unwrapped results
+remain host-network measurements and must be identified separately.
 
 The lifecycle scripts pin the server to `SERVER_CORES`. The replay driver and
 sampler are pinned to the disjoint `CLIENT_CORES` set. The topology-derived

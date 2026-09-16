@@ -397,6 +397,10 @@ def undeclared_variation(results):
                 residual[rname].add(run.get(rname))
         for rname in CAMPAIGN_KNOBS:
             residual[rname].add(run.get(rname))
+        # Namespace IDs are ephemeral; the network setup is the comparable
+        # property. Historical results did not record it at all.
+        residual["network_mode"].add(
+            result.get("host", {}).get("network", {}).get("mode", "unrecorded"))
     for rname in sorted(residual):
         if len(residual[rname]) > 1:
             values = ", ".join(str(v) for v in sorted(residual[rname], key=repr))
