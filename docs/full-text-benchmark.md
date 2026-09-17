@@ -392,7 +392,9 @@ extraction: the first 50 source queries per class, except the two high phrase
 classes, which contain only 36 each upstream, plus the derived scan classes
 and the 18 curated regex patterns. The default `queries.txt` is
 derived by requiring exact hit-count agreement across all three engines on
-both the 10M standard corpus and 33.3M scale corpus. Every rejection, count,
+the corpora recorded in `selection.json`. The current selection covers the
+10M standard corpus; it does not establish agreement on the 33.3M scale
+corpus. Every rejection, count,
 analyzer, binary, version, and input hash is recorded in
 `queries/luceneutil/selection.json`. The selection may lag the source by
 whole classes while newly added classes await the next agreement run;
@@ -456,6 +458,21 @@ HTTP and engine failure markers. Reports only combine results whose resolved
 parameters have the same comparable hash. Exact-count agreement applies to
 operations that request totals; top-K cells validate their returned payload but
 do not repeat COUNT's work merely to populate the agreement table.
+
+Time-bounded replay is closed-loop. Each connection advances its own query
+cursor by concurrency, and every repetition resets those cursors. Engine
+speeds can therefore produce different completed query mixtures: slow cells
+may finish different prefixes, and connections may cycle different subsets
+when pool size and concurrency share a divisor. These rates describe the
+configured replay policy, not uniformly weighted per-query throughput.
+At c1, `--duration 0` executes every query once per repetition and can check
+slow cells without the unequal-prefix effect. Keep such fixed-work results
+separate from timed results.
+
+The default one-second replay warmup establishes connections; it does not
+establish steady-state JVM performance. Inspect repetition spread and trends,
+and rerun drifting cells across all compared engines with an explicitly
+longer `--warmup-seconds`. The result records that warmup duration.
 
 While writing the opaque replay workload, Searchbench captures the first
 request in every replay bucket. The result records its method, path, original

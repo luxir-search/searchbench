@@ -30,8 +30,10 @@ verify that exact source and regenerate `queries-all.txt`. The checked-in
 derived file means normal benchmark runs do not need that download.
 
 `queries.txt` is selected from `queries-all.txt` by exact hit-count agreement
-between Luxir, OpenSearch, and Elasticsearch on both the 10M standard corpus
-and 33.3M scale corpus. `selection.json` records the corpora, analyzers,
+between Luxir, OpenSearch, and Elasticsearch on the corpora recorded in
+`selection.json`. The current selection covers the 10M standard corpus;
+agreement on the 33.3M scale corpus requires a separate check.
+`selection.json` records the corpora, analyzers,
 engine versions, hashes, class counts, and every rejected query. Run
 `scripts/select-queries.sh` after changing an analyzer, parser, or corpus.
 
