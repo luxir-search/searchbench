@@ -89,13 +89,16 @@ The current pinned reference versions and verified artifact identities are in
 binary identity, observed CPU affinity, process file limits, corpus identity,
 and host state.
 
-The current reference run uses OpenSearch 3.7.0 from its Apache-2.0 official
-Linux x64 distribution and Elasticsearch 9.4.2 from its Elastic License 2.0
-official Linux x86_64 distribution, both with their bundled JDK. The Luxir arm
-uses the locally built release binary and records its SHA-256 and repository
-state. Elastic License 2.0 contains no benchmark-publication restriction;
+The current reference run uses OpenSearch 3.8.0 (Lucene 10.5.0) from its
+Apache-2.0 official Linux x64 distribution and Elasticsearch 9.5.4 (Lucene
+10.5.1) from its Elastic License 2.0 official Linux x86_64 distribution, both
+with their bundled JDK. The Luxir arm uses the locally built release binary
+and records its SHA-256 and repository state. Elastic License 2.0 contains
+no benchmark-publication restriction;
 Elasticsearch's free source is also available under AGPLv3. Updating a pinned
-reference version changes the run definition.
+reference version changes the run definition. Set `BASELINE_REFEED=1` for the
+first baseline after an engine upgrade so the index is built by the new
+release; corpus and layout identity alone do not invalidate a reused index.
 
 ## Corpus
 
@@ -130,9 +133,14 @@ count, SHA-256, lane sizes, and transformation details are in
 
 | Engine | `body` definition | Why |
 |---|---|---|
-| Luxir | `type: text`, `stored: true`, tokenizer `unicode_word`, then `lowercase` | Unicode word boundaries plus lowercase is the closest explicit Luxir counterpart to the Lucene standard analyzer while retaining Luxir's normal retrievable text posture. |
+| Luxir | `type: text`, `stored: true`, tokenizer `unicode_word`, then `lowercase`, `long_terms: truncate` | Unicode word boundaries plus lowercase is the closest explicit Luxir counterpart to the Lucene standard analyzer while retaining retrievable text. Explicit truncation preserves the benchmark's original treatment of terms over 255 bytes. |
 | OpenSearch | `type: text`, index and search analyzer `standard` | Use the engine's Lucene standard-analysis path explicitly at both index and query time. |
 | Elasticsearch | `type: text`, index and search analyzer `standard` | Same as OpenSearch. |
+
+Luxir's body field explicitly truncates analyzed terms over 255 bytes instead
+of using its newer default, which preserves a prefix and hashes the full term
+into a suffix. This pins the benchmark's established term representation;
+the selected query counts still determine agreement with Lucene's analysis.
 
 The analyzers are close counterparts, not byte-for-byte token-stream
 equivalents. In particular, Unicode lowercasing details can differ. The query

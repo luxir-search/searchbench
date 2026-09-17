@@ -646,8 +646,7 @@ def main():
         result.get("task_parameters", {}).get("request_cache") is False
         for result in results.values())
     cache_line = (
-        "- The REST shard request cache is explicitly disabled in every cell; "
-        "the query/filter cache remains enabled."
+        "- The REST shard request cache is explicitly disabled in every cell."
         if cache_explicit else
         "- Legacy result: the REST shard request-cache switch was not explicit "
         "in every cell.")

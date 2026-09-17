@@ -265,7 +265,7 @@ class BaseAdapter:
     def expected_facets(params):
         """(name, ...) of facet results the response must carry."""
         shape = params["shape"]
-        if shape in ("facet", "date_facet"):
+        if shape in ("facet", "date_facet", "nested_facet"):
             return ("facet",)
         if shape == "multi":
             return tuple(f["name"] for f in params["facets"])
@@ -484,19 +484,29 @@ class LuxirAdapter(BaseAdapter):
         return self.encode("POST", f"/collections/{self.collection}/_search", body,
                            params.get("name", "get"), item.text)
 
-    def count(self, raw):
-        counts = []
+    @staticmethod
+    def query_results(raw):
+        """Yield the named q result from each search response batch."""
+        found = None
         for line in raw.splitlines():
             if not line:
                 continue
             value = json.loads(line)
-            if isinstance(value.get("found"), int):
-                counts.append(value["found"])
+            if value.get("error"):
+                raise RuntimeError(f"Luxir response error: {value['error']}")
             q = value.get("ops", {}).get("q")
-            if isinstance(q, dict):
-                for key in ("matches", "found"):
-                    if isinstance(q.get(key), int):
-                        counts.append(q[key])
+            if not isinstance(q, dict):
+                raise RuntimeError("Luxir search response is missing ops.q")
+            if "found" in q:
+                total = q["found"]
+                if type(total) is not int or total < 0 or (found is not None and found != total):
+                    raise RuntimeError("Luxir search response has invalid or inconsistent found count")
+                found = total
+            yield q
+
+    def count(self, raw):
+        counts = [value["found"] for value in self.query_results(raw)
+                  if isinstance(value.get("found"), int)]
         return counts[0] if counts else None
 
     def check(self, raw):
@@ -508,8 +518,8 @@ class LuxirAdapter(BaseAdapter):
                 raise RuntimeError(f"Luxir response error: {value['error']}")
 
     def validate(self, params, raw, item=None):
-        self.check(raw)
         if params["shape"] == "health":
+            self.check(raw)
             if json.loads(raw).get("status") != "ok":
                 raise RuntimeError("Luxir health response is not ok")
             return None
@@ -519,11 +529,8 @@ class LuxirAdapter(BaseAdapter):
         found = None
         docs = None
         ops = {}
-        for line in raw.splitlines():
-            if not line:
-                continue
-            value = json.loads(line)
-            if found is None and isinstance(value.get("found"), int):
+        for value in self.query_results(raw):
+            if "found" in value:
                 found = value["found"]
             if isinstance(value.get("docs"), list):
                 docs = (docs or []) + value["docs"]
@@ -532,6 +539,8 @@ class LuxirAdapter(BaseAdapter):
         if params["shape"] == "get":
             self.validate_get_docs(params, item, docs)
             return None
+        if wants_total(params) and params.get("count_mode", "exact") == "exact" and found is None:
+            raise RuntimeError(f"{name}: missing exact found count")
         if params["limit"]:
             if docs is None:
                 raise RuntimeError(f"{name}: missing docs")
@@ -565,7 +574,7 @@ class LuxirAdapter(BaseAdapter):
         for stat in self.expected_stats(params):
             if stat not in ops:
                 raise RuntimeError(f"{name}: missing stat '{stat}'")
-        return self.count(raw)
+        return found
 
     def validate_selected_probe(self, params, raw, expected):
         """Exact-count check for a selected-cell probe (unfiltered row, totals
@@ -577,10 +586,7 @@ class LuxirAdapter(BaseAdapter):
         disjoint)."""
         name = params.get("name", "selected probe")
         buckets = {}
-        for line in raw.splitlines():
-            if not line:
-                continue
-            value = json.loads(line)
+        for value in self.query_results(raw):
             result = value.get("ops", {}).get("facet")
             if isinstance(result, dict):
                 for bucket in result.get("buckets", ()):

@@ -1,25 +1,25 @@
 {
-  "verified_at_utc": "2026-08-14T00:00:00Z",
+  "verified_at_utc": "2026-09-15T18:58:20Z",
   "verification_sources": {
-    "opensearch": "https://opensearch.org/releases/",
-    "elasticsearch": "https://www.elastic.co/downloads/past-releases?product=elasticsearch"
+    "opensearch": "https://github.com/opensearch-project/OpenSearch/releases/tag/3.8.0",
+    "elasticsearch": "https://github.com/elastic/elasticsearch/releases/tag/v9.5.4"
   },
   "opensearch": {
-    "version": "3.7.0",
+    "version": "3.8.0",
     "distribution": "official Linux x64 tarball with bundled JDK",
     "license": "Apache-2.0",
-    "url": "https://artifacts.opensearch.org/releases/bundle/opensearch/3.7.0/opensearch-3.7.0-linux-x64.tar.gz",
-    "signature_url": "https://artifacts.opensearch.org/releases/bundle/opensearch/3.7.0/opensearch-3.7.0-linux-x64.tar.gz.sig",
+    "url": "https://artifacts.opensearch.org/releases/bundle/opensearch/3.8.0/opensearch-3.8.0-linux-x64.tar.gz",
+    "signature_url": "https://artifacts.opensearch.org/releases/bundle/opensearch/3.8.0/opensearch-3.8.0-linux-x64.tar.gz.sig",
     "signing_key_url": "https://artifacts.opensearch.org/publickeys/opensearch-release.pgp",
     "signing_key_fingerprint": "A8B2D9E04CD51FEF6AA2DB53BA81D99981191457",
     "verification": "detached signature and official signing-key fingerprint; local SHA-512 also recorded"
   },
   "elasticsearch": {
-    "version": "9.4.2",
+    "version": "9.5.4",
     "distribution": "official default Linux x86_64 tarball with bundled JDK",
     "license": "Elastic License 2.0 distribution; free source is also available under AGPLv3",
-    "url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.4.2-linux-x86_64.tar.gz",
-    "checksum_url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.4.2-linux-x86_64.tar.gz.sha512",
+    "url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz",
+    "checksum_url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz.sha512",
     "verification": "published SHA-512 sidecar, checked by download.sh"
   },
   "notes": [

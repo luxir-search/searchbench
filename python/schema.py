@@ -8,7 +8,7 @@
 # and posture - deliberately comparing versions is normal harness use.
 # Numbers start where the retired global constant left off.
 INDEX_LAYOUT_VERSIONS = {
-    "luxir": 3,  # sparse segment file table + single-file small segments (2026-08)
+    "luxir": 4,  # current schema history + explicit long-term truncation (2026-09)
     "elasticsearch": 3,
     "opensearch": 3,
 }
@@ -31,6 +31,7 @@ LUXIR_SCHEMA = {
             "type": "text",
             "stored": True,
             "analyzer": LUXIR_ANALYZER,
+            "long_terms": "truncate",
         }
     }
 }
@@ -47,7 +48,8 @@ IDENTITY_POSTURE = {
 }
 
 ANALYZER_POSTURE = {
-    "luxir": LUXIR_ANALYZER,
+    "luxir": {**LUXIR_ANALYZER,
+              "long_terms": LUXIR_SCHEMA["fields"][BODY_FIELD]["long_terms"]},
     "opensearch": REST_ANALYZER,
     "elasticsearch": REST_ANALYZER,
 }

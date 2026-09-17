@@ -319,7 +319,7 @@ class SearchbenchUnitTest(unittest.TestCase):
                     "engine_config": {
                         "version": "test-version",
                         "full_text": ({"field": "body", "tokenizer": "unicode_word",
-                                       "filters": ["lowercase"]}
+                                       "filters": ["lowercase"], "long_terms": "truncate"}
                                       if engine == "luxir" else
                                       {"field": "body", "analyzer": "standard",
                                        "search_analyzer": "standard"}),
@@ -814,24 +814,59 @@ class SearchbenchUnitTest(unittest.TestCase):
         adapter = make_adapter("luxir", "searchbench")
         params = {"shape": "facet", "limit": 0, "count_mode": "exact",
                   "facet_selected": ["b", "zzz"], "name": "cell"}
-        pinned = json.dumps({"found": 5, "ops": {"facet": {"buckets": [
+        def response(value):
+            return json.dumps({"ops": {"q": value}})
+        pinned = response({"found": 5, "ops": {"facet": {"buckets": [
             {"val": "a", "count": 3}, {"val": "b", "count": 2},
             {"val": "zzz", "count": 0}]}}})
         adapter.validate(params, pinned)
-        dropped = json.dumps({"found": 5, "ops": {"facet": {"buckets": [
+        dropped = response({"found": 5, "ops": {"facet": {"buckets": [
             {"val": "a", "count": 3}, {"val": "b", "count": 2}]}}})
         with self.assertRaisesRegex(RuntimeError, "'zzz' appears 0 times"):
             adapter.validate(params, dropped)
 
-        probe = json.dumps({"found": 4, "ops": {"facet": {"buckets": [
+        probe = response({"found": 4, "ops": {"facet": {"buckets": [
             {"val": "head", "count": 3}, {"val": "tail", "count": 1}]}}})
         adapter.validate_selected_probe(params, probe, {"head": 3, "tail": 1})
         with self.assertRaisesRegex(RuntimeError, "corpus report says 2"):
             adapter.validate_selected_probe(params, probe, {"head": 2, "tail": 1})
-        drifted = json.dumps({"found": 9, "ops": {"facet": {"buckets": [
+        drifted = response({"found": 9, "ops": {"facet": {"buckets": [
             {"val": "head", "count": 3}, {"val": "tail", "count": 1}]}}})
         with self.assertRaisesRegex(RuntimeError, "refined total"):
             adapter.validate_selected_probe(params, drifted, {"head": 3, "tail": 1})
+
+    def test_luxir_named_response_ownership_and_streaming(self):
+        adapter = make_adapter("luxir", "searchbench")
+        params = resolve("GET_10", "skip")
+        docs = [{"id": value, "price_i": 1} for value in self.ids[:10]]
+        raw = "\n".join(json.dumps({"more": i == 0, "found": 999,
+                                    "docs": [{"id": "unrelated"}],
+                                    "ops": {"q": {"docs": batch}}})
+                        for i, batch in enumerate((docs[:4], docs[4:])))
+        for lane in ("exact", "skip"):
+            self.assertIsNone(adapter.validate(resolve("GET_10", lane), raw, self.get_item(10)))
+        self.assertIsNone(adapter.count(raw))
+        with self.assertRaisesRegex(RuntimeError, "missing ops.q"):
+            adapter.validate(params, json.dumps({"docs": docs}), self.get_item(10))
+        with self.assertRaisesRegex(RuntimeError, "response error"):
+            adapter.validate(params, raw + '\n{"error":"late failure"}', self.get_item(10))
+
+    def test_luxir_exact_counts_and_nested_children(self):
+        adapter = make_adapter("luxir", "searchbench")
+        params = resolve("FACET_NESTED_10_100", "exact")
+        q = {"found": 1, "docs": [{"id": "0"}], "ops": {"facet": {"buckets": [
+            {"val": "parent", "count": 1,
+             "subfacet": {"buckets": [{"val": "child", "count": 1}]}}]}}}
+        raw = json.dumps({"found": 999, "ops": {"q": q, "facet": {"buckets": []}}})
+        self.assertEqual(adapter.validate(params, raw), 1)
+        self.assertEqual(adapter.count(raw), 1)
+        del q["ops"]["facet"]["buckets"][0]["subfacet"]
+        with self.assertRaisesRegex(RuntimeError, "missing nested facet"):
+            adapter.validate(params, json.dumps({"ops": {"q": q}}))
+        for total in (None, True, -1):
+            q = {"docs": []} if total is None else {"docs": [], "found": total}
+            with self.subTest(total=total), self.assertRaisesRegex(RuntimeError, "found count"):
+                adapter.validate(resolve("HIGH_TERM_COUNT", "exact"), json.dumps({"ops": {"q": q}}))
 
     def test_query_driven_grid_moves_selectivity_into_main_query(self):
         with mock.patch.dict(os.environ, {"GRID_FILTER_MODE": "query"}):
@@ -1146,7 +1181,8 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(config["version"], "configured-head")
         self.assertEqual(config["index_layout_version"], index_layout_version("luxir"))
         self.assertEqual(config["full_text"], {
-            "field": "body", "tokenizer": "unicode_word", "filters": ["lowercase"]})
+            "field": "body", "tokenizer": "unicode_word", "filters": ["lowercase"],
+            "long_terms": "truncate"})
         self.assertEqual(config["identity"], IDENTITY_POSTURE["luxir"])
         self.assertGreaterEqual(config["nofile_soft"], 1)
         self.assertGreaterEqual(config["nofile_hard"], config["nofile_soft"])
