@@ -132,14 +132,13 @@ class SearchbenchUnitTest(unittest.TestCase):
                             for nonce in nonces))
 
         luxir = json.loads(make_adapter("luxir", "searchbench")
-                           .build(*workload[0]).body)["ops"]["q"]["top_docs"]
+                           .build(*workload[0]).body)
         outer = luxir["query"]["boolean"]
         self.assertEqual(outer["filter"], [{"range": {
             "field": "price_i", "gte": 0, "lt": 90_000}}])
         inner = outer["required"][0]["boolean"]
         self.assertEqual(inner["min_match"], 1)
-        self.assertEqual(inner["optional"][0], {
-            "expr": {"q": "body:(+alpha +beta)"}})
+        self.assertEqual(inner["optional"][0], "body:(+alpha +beta)")
         self.assertEqual(inner["optional"][1], {
             "match": {"field": "id", "val": nonces[0]}})
 
@@ -568,32 +567,51 @@ class SearchbenchUnitTest(unittest.TestCase):
         params = resolve("BOOSTED_TOP_10", "exact")
         luxir = json.loads(make_adapter("luxir", "searchbench").build(params, item).body)
         self.assertEqual(
-            luxir["ops"]["q"]["top_docs"]["query"],
-            {"expr": {"q": 'body:(+"the who" +uk -radio^2)'}})
+            luxir["query"],
+            'body:(+"the who" +uk -radio^2)')
         for engine in ("opensearch", "elasticsearch"):
             body = json.loads(make_adapter(engine, "searchbench").build(params, item).body)
             self.assertEqual(body["query"], {"query_string": {
                 "query": item.text, "default_field": "body", "default_operator": "OR"}})
 
+    def test_luxir_search_uses_root_shorthand(self):
+        adapter = make_adapter("luxir", "searchbench")
+        item = QueryItem("the", "high_term", (), "test")
+        for task, limit in (("HIGH_TERM_TOP_10", 10), ("HIGH_TERM_TOP_100", 100),
+                            ("HIGH_TERM_COUNT", 0)):
+            request = adapter.build(resolve(task, "exact"), item)
+            expected = {"query": "body:(the)", "limit": limit}
+            if limit:
+                expected["fields"] = ["id"]
+            else:
+                expected["get_number"] = True
+            self.assertEqual((request.method, request.path),
+                             ("POST", "/collections/searchbench/_search"))
+            self.assertEqual(json.loads(request.body), expected)
+        probe = json.loads(adapter.build_field_probe("cat_s").body)
+        self.assertEqual(probe["limit"], 0)
+        self.assertEqual(probe["ops"], {
+            "facet": {"field_facet": {"field": "cat_s", "limit": 1}}})
+
     def test_multiterm_classes_reach_native_query_types(self):
         cases = (
             ("wildcard", "th*e",
-             {"expr": {"q": "wildcard('th*e', field=body)"}},
+             "wildcard('th*e', field=body)",
              {"query_string": {"query": "th*e", "default_field": "body",
                                "default_operator": "OR"}}),
             ("wildcard_scan", "h*band",
-             {"expr": {"q": "wildcard('h*band', field=body)"}},
+             "wildcard('h*band', field=body)",
              {"query_string": {"query": "h*band", "default_field": "body",
                                "default_operator": "OR"}}),
             ("wildcard_lead", "*sband",
-             {"expr": {"q": "wildcard('*sband', field=body)"}},
+             "wildcard('*sband', field=body)",
              {"query_string": {"query": "*sband", "default_field": "body",
                                "default_operator": "OR"}}),
             ("regex", "(19|20)[0-9]{2}",
-             {"expr": {"q": "regex('(19|20)[0-9]{2}', field=body)"}},
+             "regex('(19|20)[0-9]{2}', field=body)",
              {"regexp": {"body": {"value": "(19|20)[0-9]{2}"}}}),
             ("prefix3", "mos*",
-             {"expr": {"q": "body:(mos*)"}},
+             "body:(mos*)",
              {"query_string": {"query": "mos*", "default_field": "body",
                                "default_operator": "OR"}}),
         )
@@ -602,7 +620,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             params = resolve(f"{query_class.upper()}_COUNT", "exact")
             luxir = json.loads(
                 make_adapter("luxir", "searchbench").build(params, item).body)
-            self.assertEqual(luxir["ops"]["q"]["top_docs"]["query"], luxir_query)
+            self.assertEqual(luxir["query"], luxir_query)
             for engine in ("opensearch", "elasticsearch"):
                 body = json.loads(
                     make_adapter(engine, "searchbench").build(params, item).body)
@@ -674,8 +692,8 @@ class SearchbenchUnitTest(unittest.TestCase):
             exact = json.loads(adapter.build(resolve("COUNT", "exact"), self.union).body)
             skip = json.loads(adapter.build(resolve("COUNT", "skip"), self.union).body)
             if engine == "luxir":
-                self.assertTrue(exact["ops"]["q"]["top_docs"]["get_number"])
-                self.assertNotIn("get_number", skip["ops"]["q"]["top_docs"])
+                self.assertTrue(exact["get_number"])
+                self.assertNotIn("get_number", skip)
             else:
                 self.assertTrue(exact["track_total_hits"])
                 self.assertNotIn("track_total_hits", skip)
@@ -685,7 +703,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             body = json.loads(make_adapter(engine, "searchbench").build(
                 resolve("TOP_10", "exact"), self.union).body)
             if engine == "luxir":
-                self.assertNotIn("get_number", body["ops"]["q"]["top_docs"])
+                self.assertNotIn("get_number", body)
             else:
                 self.assertIs(body["track_total_hits"], False)
 
@@ -712,7 +730,7 @@ class SearchbenchUnitTest(unittest.TestCase):
         single = resolve("GET_1", "skip")
         batch = resolve("GET_10", "skip")
         luxir = make_adapter("luxir", "searchbench")
-        top = json.loads(luxir.build(batch, self.get_item(10)).body)["ops"]["q"]["top_docs"]
+        top = json.loads(luxir.build(batch, self.get_item(10)).body)
         self.assertEqual(top["limit"], 10)
         self.assertEqual(
             top["query"]["constant_score"]["query"]["boolean"]["min_match"], 1)
@@ -745,7 +763,7 @@ class SearchbenchUnitTest(unittest.TestCase):
     def test_nested_facet_translation_and_validation(self):
         params = resolve("FACET_NESTED_10_100", "exact")
         luxir = json.loads(make_adapter("luxir", "searchbench").build(params, self.union).body)
-        facet = luxir["ops"]["q"]["top_docs"]["ops"]["facet"]["field_facet"]
+        facet = luxir["ops"]["facet"]["field_facet"]
         self.assertEqual((facet["field"], facet["ops"]["subfacet"]["field_facet"]["field"]),
                          ("cat_s", "cat100_s"))
         rest = json.loads(
@@ -762,7 +780,7 @@ class SearchbenchUnitTest(unittest.TestCase):
         for engine in ENGINES:
             body = json.loads(make_adapter(engine, "searchbench").build(params, self.union).body)
             if engine == "luxir":
-                top = body["ops"]["q"]["top_docs"]
+                top = body
                 self.assertEqual(top["filter"][0]["match"]["field"], "sel99_s")
                 self.assertEqual(top["ops"]["facet"]["field_facet"]["field"], "cat1m_s")
             else:
@@ -777,7 +795,7 @@ class SearchbenchUnitTest(unittest.TestCase):
         params = resolve_grid_cell("facet-selected", "99", "1M", report=report)
         self.assertEqual(params["facet_selected"], ["cat1m-7", "cat1m-1"])
         luxir = json.loads(make_adapter("luxir", "searchbench").build(params, self.union).body)
-        facet = luxir["ops"]["q"]["top_docs"]["ops"]["facet"]["field_facet"]
+        facet = luxir["ops"]["facet"]["field_facet"]
         self.assertEqual(facet["selected"], ["cat1m-7", "cat1m-1"])
         for engine in ("elasticsearch", "opensearch"):
             with self.assertRaisesRegex(ValueError, "facet_selected is luxir-only"):
@@ -814,42 +832,46 @@ class SearchbenchUnitTest(unittest.TestCase):
         adapter = make_adapter("luxir", "searchbench")
         params = {"shape": "facet", "limit": 0, "count_mode": "exact",
                   "facet_selected": ["b", "zzz"], "name": "cell"}
-        def response(value):
-            return json.dumps({"ops": {"q": value}})
-        pinned = response({"found": 5, "ops": {"facet": {"buckets": [
+        pinned = json.dumps({"docs": [], "found": 5, "ops": {"facet": {"buckets": [
             {"val": "a", "count": 3}, {"val": "b", "count": 2},
             {"val": "zzz", "count": 0}]}}})
         adapter.validate(params, pinned)
-        dropped = response({"found": 5, "ops": {"facet": {"buckets": [
+        dropped = json.dumps({"docs": [], "found": 5, "ops": {"facet": {"buckets": [
             {"val": "a", "count": 3}, {"val": "b", "count": 2}]}}})
         with self.assertRaisesRegex(RuntimeError, "'zzz' appears 0 times"):
             adapter.validate(params, dropped)
 
-        probe = response({"found": 4, "ops": {"facet": {"buckets": [
+        probe = json.dumps({"docs": [], "found": 4, "ops": {"facet": {"buckets": [
             {"val": "head", "count": 3}, {"val": "tail", "count": 1}]}}})
         adapter.validate_selected_probe(params, probe, {"head": 3, "tail": 1})
         with self.assertRaisesRegex(RuntimeError, "corpus report says 2"):
             adapter.validate_selected_probe(params, probe, {"head": 2, "tail": 1})
-        drifted = response({"found": 9, "ops": {"facet": {"buckets": [
+        drifted = json.dumps({"docs": [], "found": 9, "ops": {"facet": {"buckets": [
             {"val": "head", "count": 3}, {"val": "tail", "count": 1}]}}})
         with self.assertRaisesRegex(RuntimeError, "refined total"):
             adapter.validate_selected_probe(params, drifted, {"head": 3, "tail": 1})
 
-    def test_luxir_named_response_ownership_and_streaming(self):
+    def test_luxir_shorthand_response_ownership_and_streaming(self):
         adapter = make_adapter("luxir", "searchbench")
         params = resolve("GET_10", "skip")
         docs = [{"id": value, "price_i": 1} for value in self.ids[:10]]
-        raw = "\n".join(json.dumps({"more": i == 0, "found": 999,
-                                    "docs": [{"id": "unrelated"}],
-                                    "ops": {"q": {"docs": batch}}})
+        raw = "\n".join(json.dumps({"more": i == 0, "docs": batch,
+                                    "ops": {"q": {"found": 999,
+                                                   "docs": [{"id": "unrelated"}]}}})
                         for i, batch in enumerate((docs[:4], docs[4:])))
         for lane in ("exact", "skip"):
             self.assertIsNone(adapter.validate(resolve("GET_10", lane), raw, self.get_item(10)))
         self.assertIsNone(adapter.count(raw))
-        with self.assertRaisesRegex(RuntimeError, "missing ops.q"):
-            adapter.validate(params, json.dumps({"docs": docs}), self.get_item(10))
+        with self.assertRaisesRegex(RuntimeError, "missing root docs"):
+            adapter.validate(params, json.dumps({"ops": {"q": {"docs": docs}}}),
+                             self.get_item(10))
         with self.assertRaisesRegex(RuntimeError, "response error"):
             adapter.validate(params, raw + '\n{"error":"late failure"}', self.get_item(10))
+        with self.assertRaisesRegex(RuntimeError, "missing root docs"):
+            adapter.validate(params, raw + '\n{"ops":{"q":{"docs":[]}}}', self.get_item(10))
+        for invalid in ("", "{}", "[]", '{"docs":null}', '{"ops":{"q":{"docs":[]}}}'):
+            with self.subTest(raw=invalid), self.assertRaises(RuntimeError):
+                adapter.validate(resolve("COUNT", "skip"), invalid)
 
     def test_luxir_exact_counts_and_nested_children(self):
         adapter = make_adapter("luxir", "searchbench")
@@ -857,16 +879,23 @@ class SearchbenchUnitTest(unittest.TestCase):
         q = {"found": 1, "docs": [{"id": "0"}], "ops": {"facet": {"buckets": [
             {"val": "parent", "count": 1,
              "subfacet": {"buckets": [{"val": "child", "count": 1}]}}]}}}
-        raw = json.dumps({"found": 999, "ops": {"q": q, "facet": {"buckets": []}}})
+        q["ops"]["q"] = {"found": 999, "ops": {"facet": {"buckets": []}}}
+        raw = json.dumps(q)
         self.assertEqual(adapter.validate(params, raw), 1)
         self.assertEqual(adapter.count(raw), 1)
         del q["ops"]["facet"]["buckets"][0]["subfacet"]
         with self.assertRaisesRegex(RuntimeError, "missing nested facet"):
-            adapter.validate(params, json.dumps({"ops": {"q": q}}))
-        for total in (None, True, -1):
+            adapter.validate(params, json.dumps(q))
+        for total in (None, True, -1, 1.5, "1"):
             q = {"docs": []} if total is None else {"docs": [], "found": total}
             with self.subTest(total=total), self.assertRaisesRegex(RuntimeError, "found count"):
-                adapter.validate(resolve("HIGH_TERM_COUNT", "exact"), json.dumps({"ops": {"q": q}}))
+                adapter.validate(resolve("HIGH_TERM_COUNT", "exact"), json.dumps(q))
+        with self.assertRaisesRegex(RuntimeError, "missing exact found count"):
+            adapter.validate(resolve("HIGH_TERM_COUNT", "exact"),
+                             '{"docs":[],"ops":{"q":{"found":1}}}')
+        with self.assertRaisesRegex(RuntimeError, "inconsistent found count"):
+            adapter.count('{"docs":[],"found":1}\n{"docs":[],"found":2}')
+        self.assertEqual(adapter.count('{"docs":[],"found":1}\n{"docs":[]}'), 1)
 
     def test_query_driven_grid_moves_selectivity_into_main_query(self):
         with mock.patch.dict(os.environ, {"GRID_FILTER_MODE": "query"}):
@@ -874,7 +903,7 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(params["filter_mode"], "query")
 
         luxir = json.loads(make_adapter("luxir", "searchbench").build(params, self.union).body)
-        top = luxir["ops"]["q"]["top_docs"]
+        top = luxir
         self.assertEqual(top["query"], {"match": {"field": "sel99_s", "val": "t"}})
         self.assertNotIn("filter", top)
 
@@ -885,7 +914,7 @@ class SearchbenchUnitTest(unittest.TestCase):
     def test_facet_metrics_translate_and_validate(self):
         params = resolve_grid_cell("facet-metric-sort", "99", "1M")
         luxir = json.loads(make_adapter("luxir", "searchbench").build(params, self.union).body)
-        facet = luxir["ops"]["q"]["top_docs"]["ops"]["facet"]["field_facet"]
+        facet = luxir["ops"]["facet"]["field_facet"]
         self.assertEqual(facet["sort"], [{"expr": "price_avg", "dir": "desc"}])
         rest = json.loads(
             make_adapter("elasticsearch", "searchbench").build(params, self.union).body)
@@ -900,7 +929,7 @@ class SearchbenchUnitTest(unittest.TestCase):
         for engine in ENGINES:
             body = json.loads(make_adapter(engine, "searchbench").build(params, self.union).body)
             if engine == "luxir":
-                top = body["ops"]["q"]["top_docs"]
+                top = body
                 self.assertEqual(top["sort"], [{"expr": "cat1m_s", "dir": "asc"}])
                 self.assertNotIn("ops", top)
             else:

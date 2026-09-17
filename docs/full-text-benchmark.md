@@ -411,7 +411,7 @@ beside every derived expression.
 
 The resulting expression reaches each engine's parser intact:
 
-- Luxir receives an expression query scoped as `body:(...)`.
+- Luxir receives a bare query string scoped as `body:(...)`.
 - OpenSearch and Elasticsearch receive `query_string` with `body` as the
   default field and `OR` as the default operator.
 
@@ -435,6 +435,15 @@ secondary campaign with separate results. Its provenance, prior exact-count
 selection, and MIT license are under `queries/benchmark-game/`.
 
 ## Collection and validation
+
+Luxir requests use the root HTTP search shorthand, for example
+`{"query":"body:(the)","limit":10,"fields":["id"]}`. The response has `docs`
+and optional `found` at the root. Facets and metrics live in the root `ops`
+map, including in streamed response batches. Searchbench does not add an
+explicit `ops.q.top_docs` wrapper; structured query objects remain available
+for Boolean and filter composition. The emitted request bytes are captured
+with each result, so older full-form measurements retain their original
+request examples.
 
 Top-10 and top-100 tasks rank with each engine's normal scoring path and return
 only the corpus `id`. Luxir projects it from its column; OpenSearch and

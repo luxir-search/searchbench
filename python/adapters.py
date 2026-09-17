@@ -57,11 +57,11 @@ def luxir_query_clause(item):
     functions directly. Trailing-star prefixes parse natively.
     """
     if item.query_class in ("wildcard", "wildcard_scan", "wildcard_lead"):
-        query = {"expr": {"q": f"wildcard({expr_quote(item.text)}, field={BODY_FIELD})"}}
+        query = f"wildcard({expr_quote(item.text)}, field={BODY_FIELD})"
     elif item.query_class == "regex":
-        query = {"expr": {"q": f"regex({expr_quote(item.text)}, field={BODY_FIELD})"}}
+        query = f"regex({expr_quote(item.text)}, field={BODY_FIELD})"
     else:
-        query = {"expr": {"q": f"{BODY_FIELD}:({item.text})"}}
+        query = f"{BODY_FIELD}:({item.text})"
     if item.nonce:
         query = {"boolean": {
             "optional": [query, {"match": {"field": ID_FIELD, "val": item.nonce}}],
@@ -328,7 +328,7 @@ class LuxirAdapter(BaseAdapter):
         top = {"query": {"all": True}, "limit": 0, "get_number": True,
                "ops": {"facet": {"field_facet": {"field": field, "limit": 1}}}}
         return self.encode("POST", f"/collections/{self.collection}/_search",
-                           {"ops": {"q": {"top_docs": top}}}, "field-probe", "*:*")
+                           top, "field-probe", "*:*")
 
     def build_topology_probe(self):
         return (Request("GET", f"/collections/{self.collection}/_stats?segments=true",
@@ -456,7 +456,6 @@ class LuxirAdapter(BaseAdapter):
             top["ops"] = ops
         elif shape != "top_docs":
             raise ValueError(f"unknown shape {shape}")
-        body = {"ops": {"q": {"top_docs": top}}}
         if params.get("max_parallel"):
             # Request-level intra-request parallelism cap (1 = serial on the
             # shared arena, -1 = unlimited there; 0, luxir's inline-serial
@@ -465,8 +464,8 @@ class LuxirAdapter(BaseAdapter):
             # equivalent and ignore the param: ES is serial per shard
             # natively; OS is serial under the exact-count posture baked at
             # index creation.
-            body["max_parallel"] = params["max_parallel"]
-        return self.encode("POST", f"/collections/{self.collection}/_search", body,
+            top["max_parallel"] = params["max_parallel"]
+        return self.encode("POST", f"/collections/{self.collection}/_search", top,
                            params.get("name", shape), item.text)
 
     def build_get(self, params, item):
@@ -480,29 +479,36 @@ class LuxirAdapter(BaseAdapter):
             "boolean": {"optional": matches, "min_match": 1}}
         query = {"constant_score": {"query": query}}
         top = {"query": query, "limit": len(matches), "fields": params["fields"]}
-        body = {"ops": {"q": {"top_docs": top}}}
-        return self.encode("POST", f"/collections/{self.collection}/_search", body,
+        return self.encode("POST", f"/collections/{self.collection}/_search", top,
                            params.get("name", "get"), item.text)
 
     @staticmethod
     def query_results(raw):
-        """Yield the named q result from each search response batch."""
+        """Yield each root result batch returned by our search shorthand."""
         found = None
+        batches = 0
         for line in raw.splitlines():
             if not line:
                 continue
             value = json.loads(line)
+            if not isinstance(value, dict):
+                raise RuntimeError("Luxir search response must be an object")
             if value.get("error"):
                 raise RuntimeError(f"Luxir response error: {value['error']}")
-            q = value.get("ops", {}).get("q")
-            if not isinstance(q, dict):
-                raise RuntimeError("Luxir search response is missing ops.q")
-            if "found" in q:
-                total = q["found"]
+            # Shorthand always emits docs, including count-only batches.
+            # Requiring it here prevents a wrong envelope later in a stream
+            # from silently dropping documents or count-only work.
+            if not isinstance(value.get("docs"), list):
+                raise RuntimeError("Luxir shorthand response is missing root docs array")
+            if "found" in value:
+                total = value["found"]
                 if type(total) is not int or total < 0 or (found is not None and found != total):
                     raise RuntimeError("Luxir search response has invalid or inconsistent found count")
                 found = total
-            yield q
+            batches += 1
+            yield value
+        if not batches:
+            raise RuntimeError("Luxir search response is empty")
 
     def count(self, raw):
         counts = [value["found"] for value in self.query_results(raw)
