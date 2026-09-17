@@ -130,16 +130,31 @@ The reference downloads are lazy, so `scripts/start-opensearch.sh` or
 
 Use `scripts/run-isolated.sh COMMAND ...` for performance measurements. It
 creates a fresh Linux user/network namespace, brings up only loopback, and
-runs the command with the caller's existing UID/GID. There is no hardcoded UID
-and no sudo requirement. Engines, replay clients, ingestion, and health checks
-must all run inside this invocation. Their `127.0.0.1` is independent of the
-host's loopback, firewall rules, and container NAT/connection-tracking hooks.
+runs the command with the caller's existing UID/GID. There is no hardcoded UID,
+and the wrapper itself runs without sudo. Engines, replay clients, ingestion,
+and health checks must all run inside this invocation. Their `127.0.0.1` is
+independent of the host's loopback, firewall rules, and container
+NAT/connection-tracking hooks.
 Files, host PID numbers, CPU affinity, and the existing indices are retained.
 
 Requirements: Linux 5.3 or newer with unprivileged user/network namespaces enabled,
 util-linux (`unshare`, `setpriv`), iproute2 (`ip`), and Python 3.9 or newer.
 Setup fails if isolation is unavailable; it never falls back to host
 networking. Host firewall/container services need no changes.
+
+On Ubuntu, AppArmor can block unprivileged user namespaces, causing `unshare`
+to fail with `Operation not permitted` (including a failure to write
+`/proc/self/uid_map`). If `sysctl kernel.apparmor_restrict_unprivileged_userns`
+reports `1`, you may need this host setup step before running the wrapper:
+
+```bash
+sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+```
+
+This relaxes a host-wide AppArmor restriction; it does not change networking
+rules. Record the previous value and restore it after the campaign with
+`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1` if it was `1`.
+The command changes the running setting, not the persistent boot configuration.
 
 The namespace has no external network connection. Build and prepare the
 needed corpora and distributions first, then select a new output directory:

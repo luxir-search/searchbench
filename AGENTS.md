@@ -16,7 +16,9 @@ benchmark definition.
   wrapper invocations.
 - Set and restore CPU policy outside the wrapper, using the host's normal
   facility. On hosts with `/usr/local/sbin/agent_do`, the README shows an outer
-  cleanup trap. Network isolation itself needs no sudo or helper changes.
+  cleanup trap. The namespace wrapper runs without sudo or helper changes;
+  Ubuntu's AppArmor restriction may first need the host setup documented in
+  the README's isolated-network section.
 - Use explicit result directories for new comparison campaigns. Preserve old
   baselines, and rerun all compared engines with the same network/CPU/cache
   settings. Record intentional host-network diagnostics separately.
