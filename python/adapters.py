@@ -723,8 +723,13 @@ class RestAdapter(BaseAdapter):
         elif params["count_mode"] == "exact":
             body["track_total_hits"] = True
         # Scalar projections come from doc values. _source stays off so hit
-        # retrieval never decompresses the stored source blob.
+        # retrieval never decompresses the stored source blob, and stored
+        # fields are disabled outright: otherwise the fetch phase still reads
+        # the generated _id from stored fields for every hit. Count requests
+        # return no hits and have no fetch phase to disable.
         body.update(size=params["limit"], _source=False)
+        if params["limit"]:
+            body["stored_fields"] = "_none_"
         if params.get("fields"):
             body["docvalue_fields"] = params["fields"]
         if params.get("sort_field"):
@@ -782,6 +787,7 @@ class RestAdapter(BaseAdapter):
             "size": len(item.ids),
             "track_total_hits": False,
             "_source": False,
+            "stored_fields": "_none_",
             "docvalue_fields": params["fields"],
         }
         return self.encode("POST", self.search_path(params), body, task, item.text)

@@ -164,9 +164,11 @@ standard baseline.
 | OpenSearch | `keyword`, `index:true`, `doc_values:true` | auto-generated `_id` | Supplying `_id` makes indexing overwrite-aware. An auto-generated internal ID preserves the append-only indexing fast path while the corpus field handles lookup and projection. |
 | Elasticsearch | `keyword`, `index:true`, `doc_values:true` | auto-generated `_id` | Same as OpenSearch. |
 
-REST search hits still contain the generated `_id` as protocol metadata.
-Searchbench neither queries nor validates it. This is an unavoidable extra
-stored identity in the REST engines under the append-only posture.
+The generated `_id` is an unavoidable extra stored identity in the REST
+engines under the append-only posture, but reading it is not: requests that
+return hits set `stored_fields:_none_`, so the fetch phase performs no
+stored-field read per hit and hits carry only the doc-value `id`. Searchbench
+neither queries nor validates `_id`.
 
 ### Other standard-corpus fields
 
@@ -447,7 +449,8 @@ request examples.
 
 Top-10 and top-100 tasks rank with each engine's normal scoring path and return
 only the corpus `id`. Luxir projects it from its column; OpenSearch and
-Elasticsearch use `docvalue_fields` with `_source:false`. Searchbench does not
+Elasticsearch use `docvalue_fields` with `_source:false` and
+`stored_fields:_none_`. Searchbench does not
 claim identical scoring implementations or identical top-doc order. These
 tasks explicitly do not request a total match count: COUNT owns that operation,
 and combining it with top-K disables pruning differently across engines.

@@ -29,6 +29,7 @@ from query_source import (BENCHMARK_GAME_QUERY_CLASSES, DERIVED_QUERY_CLASSES,
                           QueryItem, classify, read_id_batches,
                           searchbench_queries)
 from results_io import load_result, write_context
+from request_capture import capture_response
 from report import (client_saturation, fmt, fmt_memory_mib, index_shape_lines,
                     ordered_tasks, ordered_variants, pivot_query_lines,
                     representative_request_lines, startup_lines,
@@ -365,7 +366,20 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(capture["headers"][0],
                          {"name": "Host", "value": "127.0.0.1:8080"})
 
+        raw = json.dumps({"hits": {"hits": [
+            {"_id": str(index), "fields": {"id": ["x" * 200]}}
+            for index in range(10)]}}).encode()
+        response = capture_response(raw)
+        self.assertEqual(response["bytes"], len(raw))
+        self.assertEqual(response["sha256"], hashlib.sha256(raw).hexdigest())
+        hits = response["body"]["hits"]["hits"]
+        self.assertEqual([hit.get("_id") for hit in hits[:2]], ["0", "1"])
+        self.assertEqual(hits[2], "... 8 more")
+        self.assertEqual(hits[0]["fields"]["id"][0], "x" * 160 + "... 40 more chars")
+        self.assertEqual(capture_response(b"not json")["body"], "not json")
+
         result = {"representative_requests": captures,
+                  "representative_responses": {"HIGH_TERM_TOP_10": response},
                   "task_parameters": entry}
         text = "\n".join(representative_request_lines(
             {("luxir", "HIGH_TERM_TOP_10", "{}"): result}, ["HIGH_TERM_TOP_10"]))
@@ -373,6 +387,8 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertIn("POST /collections/searchbench/_search", text)
         self.assertIn('"limit": 10', text)
         self.assertIn(capture["wire_sha256"], text)
+        self.assertIn(f"Response, {len(raw):,} bytes:", text)
+        self.assertIn('"... 8 more"', text)
 
     def test_report_renders_stable_per_segment_document_shape(self):
         results = {}
@@ -745,20 +761,25 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(body["docvalue_fields"], ["id", "price_i"])
         self.assertIs(body["track_total_hits"], False)
         self.assertIs(body["_source"], False)
+        self.assertEqual(body["stored_fields"], "_none_")
         request = rest.build(batch, self.get_item(10))
         body = json.loads(request.body)
         self.assertEqual(body["query"], {"constant_score": {"filter": {"terms": {
             "id": list(self.ids[:10])}}}})
         self.assertEqual(body["size"], 10)
 
+        # stored_fields:_none_ leaves a hit without the generated _id.
         raw = json.dumps({"hits": {"hits": [{
-            "_id": "generated-internal-id",
             "fields": {"id": [self.ids[0]], "price_i": [1]},
         }]}}).encode()
         self.assertIsNone(rest.validate(single, raw, self.get_item(1)))
 
         top_request = json.loads(rest.build(resolve("TOP_10", "skip"), self.union).body)
         self.assertEqual(top_request["docvalue_fields"], ["id"])
+        self.assertEqual(top_request["stored_fields"], "_none_")
+        count_request = json.loads(
+            rest.build(resolve("HIGH_TERM_COUNT", "exact"), self.union).body)
+        self.assertNotIn("stored_fields", count_request)
 
     def test_nested_facet_translation_and_validation(self):
         params = resolve("FACET_NESTED_10_100", "exact")
