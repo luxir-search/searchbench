@@ -45,6 +45,40 @@ def capture_request(request, wire, parameters):
     }
 
 
+_RESPONSE_KEEP = 2
+_RESPONSE_TEXT = 160
+
+
+def _shorten(value):
+    if isinstance(value, dict):
+        return {key: _shorten(item) for key, item in value.items()}
+    if isinstance(value, list):
+        short = [_shorten(item) for item in value[:_RESPONSE_KEEP]]
+        if len(value) > _RESPONSE_KEEP:
+            short.append(f"... {len(value) - _RESPONSE_KEEP} more")
+        return short
+    if isinstance(value, str) and len(value) > _RESPONSE_TEXT:
+        return f"{value[:_RESPONSE_TEXT]}... {len(value) - _RESPONSE_TEXT} more chars"
+    return value
+
+
+def capture_response(raw):
+    """Record a shortened form of the response to a captured request.
+
+    What an engine puts in each hit is part of what a cell measures, and only
+    the response shows it. Lists keep their first entries and say how many were
+    dropped, and long strings are cut, so every key an engine returned stays
+    visible without carrying a hundred hits per cell. The size and hash cover
+    the complete body.
+    """
+    try:
+        body = _shorten(json.loads(raw))
+    except ValueError:
+        body = _shorten(raw.decode("utf-8", errors="replace"))
+    return {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+            "body": body}
+
+
 def request_shape_label(parameters):
     """Name the material request shape while ignoring its particular query."""
     shape = parameters.get("shape", "unknown")

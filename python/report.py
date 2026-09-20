@@ -134,11 +134,13 @@ def representative_request_lines(results, observed):
         return ["## Representative requests", "",
                 "Representative requests were not captured in these legacy results."]
 
-    lines = ["## Representative requests", "",
+    lines = ["## Representative requests and responses", "",
              "Each example is the first request of that shape actually serialized into "
              "the replay workload. The JSON body is pretty-printed for readability; "
              "the result JSON retains its original body, serialized headers, and the "
-             "SHA-256 of the exact wire bytes."]
+             "SHA-256 of the exact wire bytes. The response is the validated answer "
+             "to that request, shortened: lists keep their first entries and long "
+             "strings are cut."]
     for label, (task, vkey, bucket) in choices.items():
         source = f"`{task}`"
         if json.loads(vkey):
@@ -155,6 +157,11 @@ def representative_request_lines(results, observed):
             lines += ["", f"**{engine}.**{query_text}", "", "```http",
                       *captured_http_lines(capture), "```", "",
                       f"Wire SHA-256: `{capture.get('wire_sha256', 'N/A')}`."]
+            response = (results.get((engine, task, vkey), {})
+                        .get("representative_responses", {}).get(bucket))
+            if response is not None:
+                lines += ["", f"Response, {response['bytes']:,} bytes:", "", "```json",
+                          json.dumps(response["body"], indent=2), "```"]
     return lines
 
 
@@ -608,11 +615,11 @@ def main():
                   "Recorded configuration differs between cells in ways no variant "
                   "declares. Rows sharing an undeclared difference are not one "
                   "controlled comparison."]
-        lines += [""] + [f"> WARNING: {note}" for note in drift]
+        lines += [""] + [f"- WARNING: {note}" for note in drift]
     saturated = client_saturation(results)
     if saturated:
         lines += ["", "## Client saturation", ""]
-        lines += [f"> WARNING: {note}" for note in saturated]
+        lines += [f"- WARNING: {note}" for note in saturated]
     lines += [""] + index_shape_lines(results)
     lines += [""] + startup_lines(results)
     lines += [""]

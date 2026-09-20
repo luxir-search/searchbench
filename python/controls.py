@@ -101,7 +101,8 @@ def health_control_lines(directory, expected=True, queries=None):
     details = []
     measured_postures = set()
     for path in paths:
-        link = f"[JSON](controls/{path.name})"
+        # A path, not a link: the report is also rendered away from its directory.
+        link = f"`controls/{path.name}`"
         try:
             value = load_result(path)
         except (OSError, ValueError) as error:

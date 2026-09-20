@@ -22,7 +22,7 @@ from cpu_layout import current_cpu_sets, format_cpu_list
 from network_namespace import network_namespace
 from presets import PRESETS, TASKS, comparable_hash, param_hash, parse_override, resolve
 from query_source import QueryItem, read_id_batches, searchbench_queries
-from request_capture import capture_request
+from request_capture import capture_request, capture_response
 from results_io import write_context
 from sampler import ProcSampler
 from schema import (ANALYZER_POSTURE, BODY_FIELD, IDENTITY_POSTURE,
@@ -111,15 +111,20 @@ def make_workload(task, params, pools, max_queries, adapter, corpus=None):
 async def run_fixed(host, port, timeout, concurrency, adapter, workload, validate):
     """One pass over the workload. With validate=True this is the untimed
     validation phase: every response is fully parsed, payloads are asserted
-    per task, and total-hit counts are collected for cross-engine agreement."""
+    per task, and total-hit counts are collected for cross-engine agreement.
+    The response to each bucket's first request is kept in shortened form, the
+    counterpart of the representative request captured at serialization."""
     if not validate:
         raise ValueError("run_fixed is reserved for the validation pass")
     queue = asyncio.Queue()
+    first = {}
     for sequence, work in enumerate(workload):
         queue.put_nowait((sequence, work))
+        first.setdefault(work[0]["name"], sequence)
     latencies = []
     errors = []
     counts = {}
+    responses = {}
 
     async def worker():
         connection = adapter.connect(host, port, timeout)
@@ -135,6 +140,8 @@ async def run_fixed(host, port, timeout, concurrency, adapter, workload, validat
                 request = adapter.build(entry, item)
                 raw = await connection.request(request)
                 count = adapter.validate(entry, raw, item)
+                if first[entry["name"]] == sequence:
+                    responses[entry["name"]] = capture_response(raw)
                 if count is not None:
                     counts[f"{entry['name']}\t{item.text}"] = count
                 latencies.append((time.perf_counter_ns() - started) / 1_000_000.0)
@@ -147,7 +154,7 @@ async def run_fixed(host, port, timeout, concurrency, adapter, workload, validat
 
     started = time.perf_counter()
     await asyncio.gather(*(worker() for _ in range(min(concurrency, len(workload)))))
-    return latencies, errors, counts, time.perf_counter() - started
+    return latencies, errors, counts, time.perf_counter() - started, responses
 
 
 def materialize_workload(workload, adapter, host, port, blob_path):
@@ -668,6 +675,10 @@ async def async_main(args):
     context = {
         "label": args.label,
         "lane": args.lane,
+        # The harness that built and validated these requests, recorded the
+        # way each engine's version and version_dirty are.
+        "harness": {"version": git_head_at(str(root)),
+                    "version_dirty": git_dirty(str(root))},
         # Measured, not asserted: OS concurrent segment search can make even
         # single-shard terms aggs approximate. 0 = exact; None = engine
         # reports no bound (luxir counts exactly).
@@ -760,6 +771,8 @@ async def async_main(args):
         # bytes consumed by bench_replay. Reports render this artifact rather
         # than rebuilding a request through whatever adapter code exists later.
         "representative_requests": representative_requests,
+        # The validated responses to those same requests, shortened.
+        "representative_responses": warmup[4],
         "count_samples": count_samples,
         "errors": all_errors[:100],
     }
