@@ -15,6 +15,12 @@
 # feeds and serves (python/datasets.py), so topologies coexist on disk and
 # each is reusable: the same board can be run over one segment and over
 # tiered-45 without either feed displacing the other.
+#
+# BASELINE_WARMUP_SECONDS replays the first task, unrecorded, at the start of
+# every server session. Without it the first recorded cell of a freshly
+# started JVM engine absorbs warmup that every later cell gets for free. The
+# pass uses the session's last variant spec, by convention the highest
+# concurrency, to put the most requests through in the time given.
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -29,6 +35,7 @@ LABEL=${BASELINE_LABEL:-baseline}
 TITLE=${BASELINE_TITLE:-Searchbench baseline: $LANE}
 ENGINES=${BASELINE_ENGINES:-luxir}
 VARIANTS=${BASELINE_VARIANTS:--}
+WARMUP_SECONDS=${BASELINE_WARMUP_SECONDS:-0}
 DEFAULT_TASKS=$(python3 -c "import sys; sys.path.insert(0, '$PY'); \
 from presets import FULL_TEXT_TASKS; print(' '.join(FULL_TEXT_TASKS))")
 TASKS=(${BASELINE_TASKS:-$DEFAULT_TASKS FACET_10 FACET_1K FACET_HC FACET_DATE FACET_MULTI DEEP_COLLECT})
@@ -74,6 +81,19 @@ run_cells() {
   done
 }
 
+warm_session() {
+  local engine=$1 pid=$2 port=$3 spec=$4 scratch
+  scratch=$(mktemp -d) || return 1
+  echo "=== $engine session warmup: ${TASKS[0]} ${spec#-} for ${WARMUP_SECONDS}s, not recorded"
+  "$ROOT/scripts/run-driver.sh" "$engine" "${TASKS[0]}" --lane "$LANE" --port "$port" \
+    --server-pid "$pid" --duration "$WARMUP_SECONDS" --repetitions 1 \
+    "${CELL_TOPOLOGY_ARGS[@]}" --variant "$spec" \
+    --corpus "$CORPUS" --queries "$QUERIES" --label "$LABEL" \
+    --output "$scratch/warmup.json" > /dev/null \
+    || echo "FAILED: $engine session warmup" >&2
+  rm -rf "$scratch"
+}
+
 run_engine() {
   local engine=$1 port pid posture posture_env posture_specs artifact
   port=$(engine_port "$engine") || return 1
@@ -102,6 +122,8 @@ run_engine() {
         > "$OUTDIR/$engine-served-topology.json" \
         || { "$ROOT/scripts/stop-$engine.sh"; return 1; }
     fi
+    [[ $WARMUP_SECONDS == 0 ]] \
+      || warm_session "$engine" "$pid" "$port" "${posture_specs##* }"
     run_cells "$engine" "$pid" "$port" "$posture_specs"
     record_health_control "$engine" "$pid" "$port" "$OUTDIR" "${posture_specs%% *}" \
       || echo "FAILED: $engine health control" >&2
