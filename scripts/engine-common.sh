@@ -135,7 +135,7 @@ archive_engine_data() {
 # force-merges back together. Feed-only - a measured session never runs with
 # these.
 luxir_ingest_args() {
-  echo "--indexing.max-inverter-ram-mb=3814 --indexing.max-inverter-docs=5000000" \
+  echo "--indexing.max-inverter-ram-mb=3814" \
        "--indexing.merge-factor=64 --indexing.max-ram-mb=0"
 }
 
