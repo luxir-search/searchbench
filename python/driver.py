@@ -24,7 +24,7 @@ from presets import PRESETS, TASKS, comparable_hash, param_hash, parse_override,
 from query_source import QueryItem, read_id_batches, searchbench_queries
 from request_capture import capture_request, capture_response
 from results_io import write_context
-from sampler import ProcSampler
+from sampler import AllocatorSampler, ProcSampler
 from schema import (ANALYZER_POSTURE, BODY_FIELD, IDENTITY_POSTURE,
                     index_layout_version)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
@@ -454,6 +454,20 @@ def process_startup_config(engine, pid):
     }
 
 
+def make_allocator_sampler(args, output):
+    """Opt-in allocator diagnostic for comparing Luxir builds.
+
+    SEARCHBENCH_ALLOCATOR_STATS_MS polls Luxir's jemalloc statistics at that
+    interval during the measured replay. Each poll is server work, so leave it
+    unset for cross-engine comparisons and set it equally on both arms of an A/B.
+    """
+    interval_ms = int(os.environ.get("SEARCHBENCH_ALLOCATOR_STATS_MS", "0") or 0)
+    if interval_ms <= 0 or args.engine != "luxir":
+        return None
+    return AllocatorSampler(args.host, args.port, "/_stats?memory=true",
+                            str(output.with_suffix(".allocator.csv")), interval_ms / 1000)
+
+
 def server_config(engine, versions, args):
     common = {"host": args.host, "port": args.port, "shards": 1, "replicas": 0,
               "network_host": "127.0.0.1", "security_enabled": False,
@@ -586,12 +600,17 @@ async def async_main(args):
         if declared_topology is not None:
             assert_topology(declared_topology, topology_before)
         sampler = ProcSampler(args.server_pid, timeline)
+        allocator_sampler = make_allocator_sampler(args, output)
         sampler.start()
+        if allocator_sampler:
+            allocator_sampler.start()
         try:
             replay = run_replay(
                 root, args, adapter, params["shape"], blob_path, driver_output)
         finally:
             memory = sampler.stop()
+            if allocator_sampler:
+                memory["allocator"] = allocator_sampler.stop()
         topology_after = (index_topology(adapter, args.host, args.port, args.timeout)
                           if indexed else {})
 

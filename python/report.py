@@ -405,6 +405,9 @@ def undeclared_variation(results):
                 residual[rname].add(run.get(rname))
         for rname in CAMPAIGN_KNOBS:
             residual[rname].add(run.get(rname))
+        # Allocator polling is server work inside the measured interval.
+        residual["allocator_stats_ms"].add(
+            result.get("memory", {}).get("allocator", {}).get("interval_ms"))
         # Namespace IDs are ephemeral; the network setup is the comparable
         # property. Historical results did not record it at all.
         residual["network_mode"].add(

@@ -297,7 +297,13 @@ server. Override this with `CLIENT_CORES` and `SERVER_CORES`.
 
 Results are written below `results/`; campaign scripts render a Markdown
 report beside the result JSON. Reports show total and anonymous resident
-memory separately, the effective startup parameters observed for each engine,
+memory separately. To compare Luxir builds by allocator statistics, set
+`SEARCHBENCH_ALLOCATOR_STATS_MS` (for example 250): the driver then polls
+Luxir's `/_stats?memory=true` during replay and records peak jemalloc
+allocated, active, and resident bytes under `memory.allocator`, with a
+`.allocator.csv` timeline. The polls are server work, so keep it unset for
+cross-engine runs and equal on both arms of an A/B; reports flag cells that
+differ. Reports also show the effective startup parameters observed for each engine,
 and one captured wire request for each request shape. The examples come from
 the replay workload itself rather than being recreated by the report. Server
 data, logs, PID files, downloaded distributions, and driver build products are

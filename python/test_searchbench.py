@@ -1,11 +1,14 @@
 from collections import Counter, defaultdict
 import hashlib
+import http.server
 import json
 import lzma
 import os
 from pathlib import Path
 import sys
 import tempfile
+import threading
+import time
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -29,6 +32,7 @@ from query_source import (BENCHMARK_GAME_QUERY_CLASSES, DERIVED_QUERY_CLASSES,
                           QueryItem, classify, read_id_batches,
                           searchbench_queries)
 from results_io import load_result, write_context
+from sampler import AllocatorSampler
 from request_capture import capture_response
 from report import (client_saturation, fmt, fmt_memory_mib, index_shape_lines,
                     ordered_tasks, ordered_variants, pivot_query_lines,
@@ -1241,6 +1245,76 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertTrue(config["startup"]["argv"])
         self.assertEqual(len(config["startup"]["cmdline_sha256"]), 64)
 
+
+class AllocatorSamplerTest(unittest.TestCase):
+    def sample(self, responses):
+        """Poll a stub stats endpoint that serves `responses` in turn (the
+        last one repeats); each is a JSON body or an HTTP status code."""
+        served = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def do_GET(self):
+                response = responses[min(len(served), len(responses) - 1)]
+                served.append(self.path)
+                status, body = ((response, {}) if isinstance(response, int)
+                                else (200, response))
+                payload = json.dumps(body).encode()
+                self.send_response(status)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                timeline = os.path.join(temp_dir, "result.allocator.csv")
+                sampler = AllocatorSampler("127.0.0.1", server.server_address[1],
+                                           "/_stats?memory=true", timeline, 0.01)
+                sampler.start()
+                time.sleep(0.15)
+                result = sampler.stop()
+                with open(timeline, encoding="utf-8") as output:
+                    rows = output.read().splitlines()
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertTrue(served)
+        self.assertTrue(all(path == "/_stats?memory=true" for path in served))
+        return result, rows
+
+    def test_peaks_and_timeline(self):
+        stats = {"memory": {"jemalloc": {"allocated_bytes": 3 << 20,
+                                         "active_bytes": 4 << 20,
+                                         "resident_bytes": 6 << 20}}}
+        result, rows = self.sample([stats])
+        self.assertEqual(result["errors"], 0)
+        self.assertGreater(result["samples"], 1)
+        self.assertEqual((result["peak_allocated_kb"], result["peak_active_kb"],
+                          result["peak_resident_kb"]), (3072, 4096, 6144))
+        self.assertEqual(rows[0], "elapsed_s,epoch_s,jemalloc_allocated_kb,"
+                                  "jemalloc_active_kb,jemalloc_resident_kb")
+        self.assertTrue(rows[1].endswith("3072,4096,6144"))
+
+    def test_failed_polls_are_counted_and_retried(self):
+        stats = {"memory": {"jemalloc": {"allocated_bytes": 1 << 20}}}
+        result, _rows = self.sample([500, {"totals": {}}, stats])
+        self.assertEqual(result["errors"], 2)
+        self.assertGreater(result["samples"], 0)
+        self.assertEqual(result["peak_allocated_kb"], 1024)
+
+    def test_no_successful_poll_reports_no_peaks(self):
+        result, rows = self.sample([{"totals": {}}])
+        self.assertEqual(result["samples"], 0)
+        self.assertGreater(result["errors"], 0)
+        self.assertIn("no memory.jemalloc", result["last_error"])
+        self.assertIsNone(result["peak_allocated_kb"])
+        self.assertEqual(len(rows), 1)
 
 if __name__ == "__main__":
     unittest.main()
