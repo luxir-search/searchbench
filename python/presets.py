@@ -452,7 +452,7 @@ def designated_values(report, field, labels):
     return picked
 
 
-def resolve_grid_cell(grid, selectivity, cardinality, count_mode="exact", max_parallel=1,
+def resolve_grid_cell(grid, selectivity, cardinality, count_mode="exact", max_parallel=0,
                       report=None):
     """Resolve one fixed-emission grid cell. Grids that pin selected values
     (spec key `selected`) need the corpus cardinality report to name them."""
@@ -467,12 +467,12 @@ def resolve_grid_cell(grid, selectivity, cardinality, count_mode="exact", max_pa
     # match_all: the grid controls the DOMAIN exactly - selectivity is the
     # sel-tier filter over the whole corpus, never a full-text query's result
     # set (full-text domains belong to the workload presets).
-    # max_parallel=1 (default): serial-everywhere strategy posture - ES is
-    # serial natively, OS serial via the exact-count setting, luxir via the
-    # request param (only the luxir adapter translates it; 1 = serial on
-    # luxir's shared arena). 0 = luxir's serving default since 2026-09-01,
-    # inline serial on the connection thread; -1 = the parallel lane (the
-    # pre-flip 0). In params, so it is part of the comparability hash.
+    # max_parallel=0 (default): serial-everywhere strategy posture, matching
+    # the full-text campaigns - ES is serial natively, OS serial via the
+    # exact-count setting, luxir by its serving default (0, inline serial on
+    # the connection thread; only the luxir adapter translates the param).
+    # 1 = serial on luxir's shared arena; -1 = the parallel lane. In params,
+    # so it is part of the comparability hash.
     #
     # request_cache=False is mandatory wherever limit=0, not optional: the
     # ES/OS shard request cache is enabled by default for size:0 requests only,

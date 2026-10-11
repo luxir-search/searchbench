@@ -433,7 +433,7 @@ def grid_cells(grid, selectivities=None, cardinalities=None):
 
 
 def archive_results(outdir, engines, grid, lane, selectivities=None, cardinalities=None,
-                    max_parallel=1, report=None):
+                    max_parallel=0, report=None):
     for engine in engines:
         for selectivity, cardinality, _field in grid_cells(grid, selectivities, cardinalities):
             params = resolve_grid_cell(grid, selectivity, cardinality, lane, max_parallel,
@@ -547,7 +547,7 @@ def run_engine(args):
     return 1 if failures else 0
 
 
-def load_prev_results(outdir, engines, grid, lane, report, max_parallel=1):
+def load_prev_results(outdir, engines, grid, lane, report, max_parallel=0):
     """Previous generation (.prev) of each cell, same guards as load_results.
     The corpus-sha check matters: a lane switch archives the OTHER lane's
     cells, and a delta across corpora would be fiction."""
@@ -593,7 +593,7 @@ def param_difference(recorded, expected, inert):
             for key in sorted(keys) if recorded.get(key) != expected.get(key)}
 
 
-def load_results(outdir, engines, grid, lane, report, max_parallel=1,
+def load_results(outdir, engines, grid, lane, report, max_parallel=0,
                  strict=False, cardinalities=None):
     """Newest usable cell per (engine, selectivity, cardinality).
 
@@ -1022,7 +1022,7 @@ def main():
     run.add_argument("--repetitions", type=int, default=1)
     run.add_argument("--server-cores",
                      default=os.environ.get("SERVER_CORES", DEFAULT_SERVER_CORES))
-    run.add_argument("--max-parallel", type=int, default=1)
+    run.add_argument("--max-parallel", type=int, default=0)
     run.add_argument("--concurrency", type=int, default=8)
     run.set_defaults(func=run_engine)
 
@@ -1040,7 +1040,7 @@ def main():
     prepare_parser.add_argument("--outdir", required=True)
     prepare_parser.add_argument("--selectivities", default="all")
     prepare_parser.add_argument("--cardinalities", default="all")
-    prepare_parser.add_argument("--max-parallel", type=int, default=1)
+    prepare_parser.add_argument("--max-parallel", type=int, default=0)
     prepare_parser.set_defaults(func=prepare)
 
     report = subparsers.add_parser("render")
@@ -1051,7 +1051,7 @@ def main():
     report.add_argument("--documents", type=int, required=True)
     report.add_argument("--outdir", required=True)
     report.add_argument("--output", help="default: <outdir>/<GRID>_GRID.md")
-    report.add_argument("--max-parallel", type=int, default=1)
+    report.add_argument("--max-parallel", type=int, default=0)
     report.add_argument("--collection", default=None,
                         help="collection used by the rendered result set")
     report.add_argument("--cardinalities", default="all",

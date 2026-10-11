@@ -88,12 +88,13 @@ REPLAY_WARMUP=${REPLAY_WARMUP:-0}
 # the JVMs - luxir for first-use structures and mmap page faults. 0 disables.
 WARM_PASSES=${WARM_PASSES:-2}
 CONCURRENCY=8       # -C 32/64 for saturation runs (recorded in run_config, not param_hash)
-MAXPAR=1            # -P 0 = parallel lane; 1 (default) = no intra-request
-                    # parallelism but arena-dispatched (carries idle-arena churn
-                    # on fast cells); -1 = serial inline on the transport thread
-                    # - the clean engine-work cpu lane (keep CONCURRENCY <=
-                    # luxir http threads). See README.md "MEASUREMENT CAVEAT"
-                    # before trusting -P 1 cpu_ms/request on fast cells.
+MAXPAR=0            # luxir max_parallel. 0 (default) = luxir's serving
+                    # default and the full-text campaigns' posture: serial,
+                    # inline on the connection thread (keep CONCURRENCY <=
+                    # luxir http threads); 1 = serial on the shared arena
+                    # (carries idle-arena churn on fast cells); -1 = the
+                    # parallel lane. In params: a luxir cell run under another
+                    # value reports as approximate against this one.
 while getopts "e:g:d:l:s:c:w:C:P:R:W:r:x" opt; do
   case $opt in
     e) ENGINES=$OPTARG ;;
