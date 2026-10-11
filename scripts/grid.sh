@@ -70,18 +70,21 @@ CARDS=all
 WARMUP_QUERIES=32   # identical match-all requests; 0 = full pool (record tier)
                     # NB sizes the QUERY POOL (and so the untimed validation
                     # pass), not a warmup pass. Cheap: 0.01-0.47s per cell.
-# Per-cell warmup is socket bring-up and nothing more: the leg has already been
-# warmed across every shape, so all this owes is one request per client on its
-# own connection before recording starts (WARMUP_REQUESTS below). Bounded by
-# requests, not time, for the same reason as the measured window - so it costs
-# the same on a fast engine as a slow one.
-# The driver's own default is 1.0s, which was a fixed second on all 42 cells and
-# the largest slice of per-cell overhead. Measured on the hardest case for it -
-# elasticsearch at 100%/2Mu, 40 qps, fewest warmup requests per second and most
-# JIT to provoke - 1.0s vs 0.1s gave median 41.2 vs 40.9 qps with the first
-# repetition fastest in both. Workload presets keep the 1.0s default: they run a
-# varied query pool, where "the leg pre-warmed every shape" does not hold.
-REPLAY_WARMUP=${REPLAY_WARMUP:-0}
+# Per-cell warmup: a fixed minimum of wall time before each cell's measured
+# repetitions, the same for every engine. The leg's warm passes (below) run
+# each shape only twice. A JIT engine is then still compiling any path that
+# runs thousands of times a second when measurement starts. On the 2026-10-11
+# nightlies series, OpenSearch 100%/1K ran 9k then 14k QPS in its first two
+# seconds against a 35k plateau reached by about 3 s. Elasticsearch 100%/10's
+# second second was 2.2x its first. Slow cells and statically compiled code
+# are flat from the first second.
+# It is a fixed minimum, not warm-until-stable: how fast an engine reaches
+# steady state is part of what it delivers, so every engine gets the same
+# budget and none gets unlimited time. The warmup is time-bound only
+# (WARMUP_REQUESTS=0): the driver ends a warmup at whichever bound comes
+# first, so a request bound cuts it short on fast cells. Cost: 3 s x 42 cells
+# per leg. Workload presets keep the driver's own 1.0 s default.
+REPLAY_WARMUP=${REPLAY_WARMUP:-3}
 # Once-per-leg passes over EVERY shape the leg will measure. See warm_engine()
 # in python/grid.py: without it the first cell after an engine start runs
 # 7-14% slow, and it is always the same cell. Every engine needs it, not just
@@ -114,8 +117,8 @@ while getopts "e:g:d:l:s:c:w:C:P:R:W:r:x" opt; do
   esac
 done
 
-# One request per client, so it resolves after -C. Overridable by env.
-WARMUP_REQUESTS=${WARMUP_REQUESTS:-$CONCURRENCY}
+# 0 = no request bound, so each cell warms for the full REPLAY_WARMUP (above).
+WARMUP_REQUESTS=${WARMUP_REQUESTS:-0}
 
 # Dev tier defaults to the text-free facet corpus in its own collection;
 # claims-tier grids override both back to the full-text corpus/collection. Every

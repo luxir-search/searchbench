@@ -716,6 +716,16 @@ def request_shape_line(grid, params):
     return "Request shape: " + ", ".join(shape) + "."
 
 
+def warmup_label(result):
+    """Per-cell warmup as configured: a time, or whichever of a time and a
+    request count ends first."""
+    config = result["run_config"]
+    label = f"{config['replay_warmup_s']}s"
+    if config.get("warmup_requests"):
+        label += f" or {config['warmup_requests']} req"
+    return label
+
+
 def posture_lines(grid, results, engines, lane, report):
     """The measurement posture, read back out of the cells themselves.
 
@@ -750,7 +760,7 @@ def posture_lines(grid, results, engines, lane, report):
              f"Corpus `{corpus_name}`, "
              f"{report.get('documents', 0):,} docs, count_mode `{lane}`. "
              + request_shape_line(grid, params), "",
-             "| engine | version | segments | clients | max_parallel | duration x reps | cores server/client | store | numeric index |",
+             "| engine | version | segments | clients | max_parallel | warmup + duration x reps | cores server/client | store | numeric index |",
              "|---|---|---:|---:|---:|---|---|---|---|"]
     for engine in engines:
         if not any(key[0] == engine for key in results):
@@ -761,7 +771,8 @@ def posture_lines(grid, results, engines, lane, report):
             f"| {spread(engine, lambda r: r['index_topology']['before']['segment_count'])} "
             f"| {spread(engine, lambda r: r['run_config']['concurrency'])} "
             f"| {spread(engine, lambda r: r['task_parameters']['max_parallel'])} "
-            f"| {spread(engine, lambda r: r['run_config']['duration_per_repetition_s'])}s x "
+            f"| {spread(engine, warmup_label)} + "
+            f"{spread(engine, lambda r: r['run_config']['duration_per_repetition_s'])}s x "
             f"{spread(engine, lambda r: r['run_config']['repetitions'])} "
             f"| {spread(engine, lambda r: r['core_split']['server'])} / "
             f"{spread(engine, lambda r: r['core_split']['client'])} "
@@ -1050,7 +1061,7 @@ def main():
     run.add_argument("--selectivities", default="all")
     run.add_argument("--cardinalities", default="all")
     run.add_argument("--max-source-queries", type=int, default=32)
-    run.add_argument("--replay-warmup", type=float, default=0.1)
+    run.add_argument("--replay-warmup", type=float, default=3.0)
     run.add_argument("--warm-passes", type=int, default=2)
     run.add_argument("--max-requests", type=int, default=0)
     run.add_argument("--warmup-requests", type=int, default=0)
