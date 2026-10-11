@@ -45,7 +45,7 @@ fi
 [[ -s "$CORPUS" ]] || { echo "missing corpus: $CORPUS" >&2; exit 1; }
 
 source "$ROOT/scripts/engine-common.sh"
-OUTDIR=${BASELINE_OUTDIR:-$ROOT/results/baseline-$LANE$(numeric_points_suffix)} || exit 2
+OUTDIR=${BASELINE_OUTDIR:-$ROOT/results/baseline-$LANE$(results_suffix)} || exit 2
 ensure_driver || exit 1
 TOPOLOGY=${BASELINE_TOPOLOGY:-}
 LAYOUT=${TOPOLOGY:-merged}

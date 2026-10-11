@@ -79,5 +79,9 @@ case "${1:-all}" in
   opensearch) install_opensearch ;;
   elasticsearch) install_elasticsearch ;;
   all) install_opensearch; install_elasticsearch ;;
-  *) echo "usage: $0 [all|opensearch|elasticsearch]" >&2; exit 2 ;;
+  # The newest official build of the next release (python/install_snapshot.py).
+  opensearch-snapshot|elasticsearch-snapshot)
+    PYTHONPATH="$ROOT/python" python3 "$ROOT/python/install_snapshot.py" "${1%-snapshot}" ;;
+  *) echo "usage: $0 [all|opensearch|elasticsearch|opensearch-snapshot|elasticsearch-snapshot]" >&2
+     exit 2 ;;
 esac

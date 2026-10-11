@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/engine-common.sh"
-VERSION=$(python3 -c 'import json; print(json.load(open("'"$ROOT"'/engines/versions.json"))["opensearch"]["version"])')
-HOME_DIR="$ROOT/engines/opensearch-$VERSION"
+HOME_DIR=$(engine_home opensearch)
 PIDFILE="$ROOT/run/opensearch.pid"
 SEARCHBENCH_DATA=$(engine_data_dir opensearch)
 export SEARCHBENCH_DATA
 mkdir -p "$ROOT/run" "$SEARCHBENCH_DATA" "$ROOT/logs/opensearch"
-echo "opensearch dataset: $SEARCHBENCH_DATASET" >&2
-[[ -x "$HOME_DIR/bin/opensearch" ]] || "$ROOT/engines/download.sh" opensearch
+echo "opensearch $(basename "$(readlink -f "$HOME_DIR")"), dataset: $SEARCHBENCH_DATASET" >&2
 [[ ! -f "$PIDFILE" ]] || { echo "OpenSearch pidfile already exists: $PIDFILE" >&2; exit 1; }
 raise_nofile_limit
 export SEARCHBENCH_ROOT="$ROOT"

@@ -87,7 +87,11 @@ separate A/B posture.
 The current pinned reference versions and verified artifact identities are in
 `engines/versions.json`. Every result records the reference version, Luxir
 binary identity, observed CPU affinity, process file limits, corpus identity,
-and host state.
+and host state. A run may instead serve an official unreleased build of a
+reference engine (an OpenSearch nightly or an Elasticsearch snapshot of
+`main`; README "Unreleased builds"). Its results then record the build id,
+source commit and download, checked against the version and commit the
+running server reports.
 
 The current reference run uses OpenSearch 3.8.0 (Lucene 10.5.0) from its
 Apache-2.0 official Linux x64 distribution and Elasticsearch 9.5.4 (Lucene

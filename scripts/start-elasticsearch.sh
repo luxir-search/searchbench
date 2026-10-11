@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/engine-common.sh"
-VERSION=$(python3 -c 'import json; print(json.load(open("'"$ROOT"'/engines/versions.json"))["elasticsearch"]["version"])')
-HOME_DIR="$ROOT/engines/elasticsearch-$VERSION"
+HOME_DIR=$(engine_home elasticsearch)
 PIDFILE="$ROOT/run/elasticsearch.pid"
 SEARCHBENCH_DATA=$(engine_data_dir elasticsearch)
 export SEARCHBENCH_DATA
 mkdir -p "$ROOT/run" "$SEARCHBENCH_DATA" "$ROOT/logs/elasticsearch"
-echo "elasticsearch dataset: $SEARCHBENCH_DATASET" >&2
-[[ -x "$HOME_DIR/bin/elasticsearch" ]] || "$ROOT/engines/download.sh" elasticsearch
+echo "elasticsearch $(basename "$(readlink -f "$HOME_DIR")"), dataset: $SEARCHBENCH_DATASET" >&2
 [[ ! -f "$PIDFILE" ]] || { echo "Elasticsearch pidfile already exists: $PIDFILE" >&2; exit 1; }
 raise_nofile_limit
 export SEARCHBENCH_ROOT="$ROOT"

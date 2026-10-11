@@ -12,7 +12,16 @@
     "signature_url": "https://artifacts.opensearch.org/releases/bundle/opensearch/3.8.0/opensearch-3.8.0-linux-x64.tar.gz.sig",
     "signing_key_url": "https://artifacts.opensearch.org/publickeys/opensearch-release.pgp",
     "signing_key_fingerprint": "A8B2D9E04CD51FEF6AA2DB53BA81D99981191457",
-    "verification": "detached signature and official signing-key fingerprint; local SHA-512 also recorded"
+    "verification": "detached signature and official signing-key fingerprint; local SHA-512 also recorded",
+    "snapshot": {
+      "version": "3.10.0",
+      "channel": "nightly",
+      "distribution": "OpenSearch CI nightly bundle of the next release, built from main: Linux x64 tarball with bundled JDK and the release plugin set",
+      "license": "Apache-2.0",
+      "manifest_url": "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/3.10.0/latest/linux/x64/tar/builds/opensearch/manifest.yml",
+      "url": "https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/3.10.0/{build_id}/linux/x64/tar/dist/opensearch/opensearch-3.10.0-linux-x64.tar.gz",
+      "verification": "CI publishes no checksum or signature for nightly bundles; the server jar's commit must match the build manifest's, and a local SHA-512 is recorded"
+    }
   },
   "elasticsearch": {
     "version": "9.5.4",
@@ -20,10 +29,20 @@
     "license": "Elastic License 2.0 distribution; free source is also available under AGPLv3",
     "url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz",
     "checksum_url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz.sha512",
-    "verification": "published SHA-512 sidecar, checked by download.sh"
+    "verification": "published SHA-512 sidecar, checked by download.sh",
+    "snapshot": {
+      "version": "9.6.0-SNAPSHOT",
+      "channel": "snapshot",
+      "distribution": "Elastic snapshot build of main: default Linux x86_64 tarball with bundled JDK",
+      "license": "Elastic License 2.0 distribution; free source is also available under AGPLv3",
+      "latest_url": "https://snapshots.elastic.co/latest/9.6.0-SNAPSHOT.json",
+      "package": "elasticsearch-9.6.0-SNAPSHOT-linux-x86_64.tar.gz",
+      "verification": "published SHA-512 sidecar; the server jar's commit must match the build manifest's"
+    }
   },
   "notes": [
     "OpenSearch signing-key fingerprint was verified against the official key endpoint after its post-2025 rotation.",
-    "Elasticsearch's Elastic License 2.0 has no benchmark-publication restriction. Elasticsearch's free source has also offered the OSI-approved AGPLv3 option since 8.16."
+    "Elasticsearch's Elastic License 2.0 has no benchmark-publication restriction. Elasticsearch's free source has also offered the OSI-approved AGPLv3 option since 8.16.",
+    "Each snapshot block names the next release line. engines/download.sh <engine>-snapshot installs its newest official build; OPENSEARCH_BUILD / ELASTICSEARCH_BUILD select it (python/installs.py). Bump a snapshot version when that release ships."
   ]
 }

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from cpu_layout import current_cpu_sets, format_cpu_list
+from installs import engine_install
 
 
 def main():
@@ -53,7 +54,13 @@ def main():
     if args.engine == "luxir":
         value["engine_config"].update({"grpc_port": 9401, "store_backend": "fs"})
     else:
-        value["engine_config"]["version"] = versions[args.engine]["version"]
+        try:
+            install = engine_install(args.engine, root=root, versions=versions)
+            value["engine_config"].update({"version": install["version"],
+                                           "build": install["build"]})
+        except RuntimeError as error:
+            # The selected build may be what failed; record why, keep the failure.
+            value["engine_config"]["install_error"] = str(error)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")

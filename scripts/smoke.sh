@@ -84,17 +84,10 @@ run_luxir() {
 }
 
 run_rest() {
-  local engine=$1 port binary version home pid
-  if [[ "$engine" == opensearch ]]; then
-    port=9201; binary=opensearch
-  else
-    port=9202; binary=elasticsearch
-  fi
-  version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]["version"])' \
-    "$ROOT/engines/versions.json" "$engine")
-  home="$ROOT/engines/$engine-$version"
-  [[ -x "$home/bin/$binary" ]] || "$ROOT/engines/download.sh" "$engine" || {
-    record_engine_failure "$engine" "official artifact download failed"
+  local engine=$1 port pid
+  port=$(engine_port "$engine") || return 1
+  engine_home "$engine" >/dev/null || {
+    record_engine_failure "$engine" "engine installation unavailable"
     return 1
   }
   [[ ! -f "$ROOT/run/$engine.pid" ]] || "$ROOT/scripts/stop-$engine.sh" || return 1

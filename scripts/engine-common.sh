@@ -71,12 +71,23 @@ dataset_name() {
 
 # What SEARCHBENCH_NUMERIC_POINTS (python/schema.py) adds to dataset names:
 # nothing for the engines' default posture, -points or -nopoints otherwise.
-# Default result trees carry it too, so a run under another posture never
-# overwrites or mixes with default cells.
 numeric_points_suffix() {
   PYTHONPATH="$ROOT/python" python3 -c "from datasets import NUMERIC_POINTS_SUFFIX
 from schema import numeric_points_setting
 print(NUMERIC_POINTS_SUFFIX[numeric_points_setting()])"
+}
+
+# Suffix of the default result trees: the numeric points suffix, plus
+# -<engine>-<build> for each reference engine not serving its pinned release,
+# so such a run never overwrites or mixes with default cells.
+results_suffix() {
+  local suffix engine build
+  suffix=$(numeric_points_suffix) || return 1
+  for engine in opensearch elasticsearch; do
+    build=$(engine_build "$engine")
+    [[ -z "$build" ]] || suffix+="-$engine-$build"
+  done
+  echo "$suffix"
 }
 
 STANDARD_CORPUS="$ROOT/corpus/corpus-10m-searchbench.ndjson"
@@ -90,8 +101,40 @@ export SEARCHBENCH_DATASET=${SEARCHBENCH_DATASET:-$(dataset_name "$STANDARD_CORP
 # durable storage, where reuse across runs is the point.
 export SEARCHBENCH_DATA_ROOT=${SEARCHBENCH_DATA_ROOT:-$ROOT/data}
 
+# The build selected for a reference engine (python/installs.py); empty for
+# its pinned release.
+engine_build() {
+  case "$1" in
+    opensearch) echo "${OPENSEARCH_BUILD:-}" ;;
+    elasticsearch) echo "${ELASTICSEARCH_BUILD:-}" ;;
+  esac
+}
+
+# Installation a reference engine serves: the pinned release, downloaded on
+# first use, or the selected build, which engines/download.sh must have
+# installed.
+engine_home() {
+  local home
+  home=$(PYTHONPATH="$ROOT/python" python3 "$ROOT/python/installs.py" home "$1") || return 1
+  if [[ ! -x "$home/bin/$1" ]]; then
+    [[ -z "$(engine_build "$1")" ]] || { echo "$1 build $home is not installed" >&2; return 1; }
+    "$ROOT/engines/download.sh" "$1" >&2 || return 1
+  fi
+  echo "$home"
+}
+
+# A selected build keeps its own data directories, data/<engine>@<build>/,
+# named after the installed build rather than the selection: an index is
+# served by the build that wrote it, and a newer snapshot starts from a fresh
+# feed.
 engine_data_dir() {
-  echo "$SEARCHBENCH_DATA_ROOT/$1/${2:-$SEARCHBENCH_DATASET}"
+  local build tag=
+  build=$(engine_build "$1")
+  if [[ -n "$build" ]]; then
+    tag=$(readlink -f "$ROOT/engines/$1-$build")
+    tag="@${tag##*/$1-}"
+  fi
+  echo "$SEARCHBENCH_DATA_ROOT/$1$tag/${2:-$SEARCHBENCH_DATASET}"
 }
 
 dataset_artifact() {
@@ -269,7 +312,8 @@ prepare_rest_config() {
   source=$(readlink -f "$home")
   stamp="$config/.searchbench-source"
   if [[ ! -f "$stamp" || "$(cat "$stamp")" != "$source" ]]; then
-    archive_existing "$config"
+    # stderr: start scripts print only the server PID on stdout.
+    archive_existing "$config" >&2
     mkdir -p "$config"
     cp -a "$home/config/." "$config/"
     printf '%s\n' "$source" > "$stamp"

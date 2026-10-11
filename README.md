@@ -137,6 +137,31 @@ BASELINE_ENGINES="luxir opensearch elasticsearch" \
 The reference downloads are lazy, so `scripts/start-opensearch.sh` or
 `scripts/start-elasticsearch.sh` also downloads its missing distribution.
 
+### Unreleased builds
+
+To measure work merged upstream but not yet released, install the newest
+official build of the next release and select it:
+
+```bash
+engines/download.sh opensearch-snapshot     # OpenSearch CI nightly bundle from main
+engines/download.sh elasticsearch-snapshot  # Elastic snapshot build of main
+OPENSEARCH_BUILD=snapshot ELASTICSEARCH_BUILD=snapshot \
+  scripts/run-isolated.sh scripts/grid.sh -e luxir,opensearch,elasticsearch
+```
+
+Each build is installed as `engines/<engine>-<version>-<build>` and is packaged
+exactly like the release: OpenSearch's nightly carries the release plugin set
+and both carry their bundled JDK. `engines/<engine>-snapshot` points at the
+newest install; naming an installed build directory instead, as in
+`OPENSEARCH_BUILD=3.10.0-nightly-12272`, pins it. Installation checks that the
+server jar was built from the commit the vendor's build manifest names.
+A selected build gets its own data directories (`data/<engine>@<build>/`), so
+its indexes are written by the build that serves them, and the default grid
+and baseline result directories gain an `-<engine>-<build>` suffix. Every
+result records the build's manifest, commit and download, and the driver
+refuses to run if the server reports a different version or commit. Report
+tables show such a version as, for example, `3.10.0 nightly 12272 (d016718b1)`.
+
 ## Isolated network runs
 
 Use `scripts/run-isolated.sh COMMAND ...` for performance measurements. It

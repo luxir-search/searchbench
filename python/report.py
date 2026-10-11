@@ -17,6 +17,7 @@ import sys
 
 from adapters import ENGINES
 from controls import health_control_lines
+from installs import version_label
 from presets import FULL_TEXT_TASKS, PRESETS, TASKS
 from request_capture import captured_http_lines, request_shape_label
 from results_io import load_result
@@ -277,7 +278,7 @@ def index_shape_lines(results):
         # per-segment on-disk bytes, the same accounting for every engine.
         size = stable_topologies.get(engine, {}).get("size_bytes")
         lines.append(
-            f"| {engine} | {str(config.get('version', 'N/A'))[:12]} "
+            f"| {engine} | {version_label(config)} "
             f"| {corpus.get('documents', 'N/A')} | {fmt_bytes(size)} "
             f"| {config.get('shards', 'N/A')} x {config.get('replicas', 'N/A')} "
             f"| {segment_text} | {status} "

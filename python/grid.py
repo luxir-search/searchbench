@@ -23,6 +23,7 @@ from presets import (GRID_NAMES, GRID_SELECTIVITIES, GRIDS, NUMERIC_COLUMNS,
                      STRING_COLUMNS, designated_values, grid_columns, param_hash,
                      resolve, resolve_grid_cell)
 from request_capture import captured_http_lines
+from installs import build_identity, selected_build_identity, version_label
 from results_io import load_result
 from schema import (index_layout_version, numeric_points_setting, numeric_posture,
                     numeric_posture_label)
@@ -559,6 +560,13 @@ def numeric_index_matches(result, engine):
             == (expected["points"], expected["skipper"]))
 
 
+def engine_build_matches(result, engine):
+    """Whether a cell was served by the build of ENGINE selected now (or, for
+    both, the pinned release)."""
+    return (build_identity(result.get("engine_config", {}).get("build"))
+            == selected_build_identity(engine))
+
+
 def load_prev_results(outdir, engines, grid, lane, report, max_parallel=0):
     """Previous generation (.prev) of each cell, same guards as load_results.
     The corpus-sha check matters: a lane switch archives the OTHER lane's
@@ -580,6 +588,7 @@ def load_prev_results(outdir, engines, grid, lane, report, max_parallel=0):
                     and result.get("engine_config", {}).get("index_layout_version")
                     == index_layout_version(engine)
                     and numeric_index_matches(result, engine)
+                    and engine_build_matches(result, engine)
                     and result.get("corpus", {}).get("sha256") == corpus_sha256):
                 results[(engine, selectivity, cardinality)] = result
     return results
@@ -640,14 +649,15 @@ def load_results(outdir, engines, grid, lane, report, max_parallel=0,
                         result = load_result(path)
                     except (OSError, ValueError):
                         continue
-                    # Hard gates: a different engine, task, index structure or
-                    # corpus is a different experiment, not a differently-
-                    # labelled one.
+                    # Hard gates: a different engine, engine build, task, index
+                    # structure or corpus is a different experiment, not a
+                    # differently-labelled one.
                     if (result.get("engine") != engine
                             or result.get("task_class") != GRIDS[grid]["task"]
                             or result.get("engine_config", {}).get("index_layout_version")
                             != index_layout_version(engine)
                             or not numeric_index_matches(result, engine)
+                            or not engine_build_matches(result, engine)
                             or result.get("corpus", {}).get("sha256") != corpus_sha256):
                         continue
                     diff = param_difference(result.get("task_parameters"), params, inert)
@@ -746,7 +756,7 @@ def posture_lines(grid, results, engines, lane, report):
             continue
         lines.append(
             f"| {engine} "
-            f"| {spread(engine, lambda r: str(r['engine_config']['version'])[:12])} "
+            f"| {spread(engine, lambda r: version_label(r['engine_config']))} "
             f"| {spread(engine, lambda r: r['index_topology']['before']['segment_count'])} "
             f"| {spread(engine, lambda r: r['run_config']['concurrency'])} "
             f"| {spread(engine, lambda r: r['task_parameters']['max_parallel'])} "
@@ -770,6 +780,10 @@ def posture_lines(grid, results, engines, lane, report):
               *GRID_DOC[grid]["notes"],
               "- Luxir's `version` is a repository stamp, while `binary_sha256` is "
               "the identity of the executable that actually served the cell.",
+              "- A reference-engine `version` that names a channel and build is an "
+              "unreleased official build of that engine (nightly or snapshot) at the "
+              "commit shown; the cell's `engine_config.build` records its manifest "
+              "and download.",
               "- Multi-shape JVM runs intentionally measure a mixed steady state; "
               "single-shape deployments should use a separate process per shape.",
               "- Per-cell JSON carries the rest: heap, the affinity actually observed, "

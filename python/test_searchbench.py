@@ -22,6 +22,8 @@ from driver import (file_sha256, make_workload, materialize_workload,
                     resolve_running_binary, server_config)
 from feed_luxir import ALLOW_DUPS_LINE, feed_topology, range_blocks, stream_records
 from feed_rest import MAPPINGS, bulk_chunks, feed_topology as feed_rest_topology
+from installs import (PROVENANCE_FILE, check_served_version, engine_install,
+                      version_label)
 from import_luceneutil_queries import (REGEX_TASKS, escape_pattern, escape_term,
                                        expression)
 from presets import (BENCHMARK_GAME_TASKS, FULL_TEXT_TASKS, GRIDS, METRIC1,
@@ -1331,6 +1333,96 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(config["startup"]["executable"], os.readlink("/proc/self/exe"))
         self.assertTrue(config["startup"]["argv"])
         self.assertEqual(len(config["startup"]["cmdline_sha256"]), 64)
+
+
+class EngineInstallTest(unittest.TestCase):
+    VERSIONS = {"opensearch": {"version": "3.8.0", "distribution": "release tarball",
+                               "license": "Apache-2.0"}}
+    BUILD = {"engine": "opensearch", "channel": "nightly", "version": "3.10.0",
+             "build_id": "12272", "commit": "d016718b1718659f39d1e587a33fad5dc54fd711",
+             "distribution": "nightly bundle", "license": "Apache-2.0"}
+
+    def make_root(self, temp_dir):
+        root = Path(temp_dir)
+        build = root / "engines" / "opensearch-3.10.0-nightly-12272"
+        build.mkdir(parents=True)
+        (build / PROVENANCE_FILE).write_text(json.dumps(self.BUILD), encoding="utf-8")
+        (root / "engines" / "opensearch-snapshot").symlink_to(build.name)
+        return root
+
+    def test_release_is_the_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                mock.patch.dict(os.environ, {"OPENSEARCH_BUILD": ""}):
+            root = self.make_root(temp_dir)
+            install = engine_install("opensearch", root=root, versions=self.VERSIONS)
+        self.assertEqual(install["home"], root / "engines" / "opensearch-3.8.0")
+        self.assertEqual(install["version"], "3.8.0")
+        self.assertIsNone(install["build"])
+
+    def test_a_selected_build_serves_its_provenance(self):
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                mock.patch.dict(os.environ, {"OPENSEARCH_BUILD": "snapshot"}):
+            root = self.make_root(temp_dir)
+            install = engine_install("opensearch", root=root, versions=self.VERSIONS)
+            self.assertEqual(install["home"].resolve().name, "opensearch-3.10.0-nightly-12272")
+        self.assertEqual(install["version"], "3.10.0")
+        self.assertEqual(install["build"], self.BUILD)
+        self.assertEqual(version_label({"version": "3.10.0", "build": self.BUILD}),
+                         "3.10.0 nightly 12272 (d016718b1)")
+        self.assertEqual(version_label({"version": "3.8.0"}), "3.8.0")
+
+    def test_a_build_without_provenance_is_refused(self):
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                mock.patch.dict(os.environ, {"OPENSEARCH_BUILD": "main"}):
+            root = self.make_root(temp_dir)
+            with self.assertRaisesRegex(RuntimeError, "OPENSEARCH_BUILD=main"):
+                engine_install("opensearch", root=root, versions=self.VERSIONS)
+
+    def test_served_version_must_match_the_installation(self):
+        release = {"version": "3.8.0", "build": None}
+        check_served_version("opensearch", release, {"number": "3.8.0"})
+        with self.assertRaisesRegex(RuntimeError, "not the installation"):
+            check_served_version("opensearch", release, {"number": "3.10.0"})
+        build = {"version": "3.10.0", "build": self.BUILD}
+        check_served_version("opensearch", build,
+                             {"number": "3.10.0", "build_hash": self.BUILD["commit"]})
+        with self.assertRaisesRegex(RuntimeError, "build_hash"):
+            check_served_version("opensearch", build,
+                                 {"number": "3.10.0", "build_hash": "e5a3c5691be8"})
+
+    def test_rest_server_config_records_the_served_build(self):
+        args = SimpleNamespace(host="127.0.0.1", port=9201, server_cores="0",
+                               server_pid=os.getpid())
+        served = {"version": {"number": "3.10.0", "build_hash": self.BUILD["commit"],
+                              "build_snapshot": False}}
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                mock.patch.dict(os.environ, {"OPENSEARCH_BUILD": "snapshot",
+                                             "SEARCHBENCH_NUMERIC_POINTS": ""}), \
+                mock.patch("driver.request_json", return_value=served):
+            root = self.make_root(temp_dir)
+            with mock.patch("driver.engine_install",
+                            lambda engine, versions: engine_install(
+                                engine, root=root, versions=versions)):
+                config = server_config("opensearch", self.VERSIONS, args)
+                served["version"]["build_hash"] = "e5a3c5691be8"
+                with self.assertRaisesRegex(RuntimeError, "not the installation"):
+                    server_config("opensearch", self.VERSIONS, args)
+        self.assertEqual(config["version"], "3.10.0")
+        self.assertEqual(config["build"], self.BUILD)
+        self.assertEqual(config["served_version"]["build_hash"], self.BUILD["commit"])
+        self.assertEqual(config["distribution"], "nightly bundle")
+
+    def test_grid_cells_match_on_the_served_build(self):
+        import grid
+        release_cell = {"engine_config": {"version": "3.8.0"}}
+        build_cell = {"engine_config": {"version": "3.10.0", "build": self.BUILD}}
+        with mock.patch("grid.selected_build_identity", return_value=None):
+            self.assertTrue(grid.engine_build_matches(release_cell, "opensearch"))
+            self.assertFalse(grid.engine_build_matches(build_cell, "opensearch"))
+        with mock.patch("grid.selected_build_identity",
+                        return_value=("12272", self.BUILD["commit"])):
+            self.assertFalse(grid.engine_build_matches(release_cell, "opensearch"))
+            self.assertTrue(grid.engine_build_matches(build_cell, "opensearch"))
 
 
 class AllocatorSamplerTest(unittest.TestCase):

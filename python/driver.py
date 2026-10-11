@@ -19,6 +19,8 @@ import time
 
 from adapters import DEFAULT_PORTS, ENGINES, make_adapter
 from cpu_layout import current_cpu_sets, format_cpu_list
+from http_sync import request_json
+from installs import check_served_version, engine_install
 from network_namespace import network_namespace
 from presets import PRESETS, TASKS, comparable_hash, param_hash, parse_override, resolve
 from query_source import QueryItem, read_id_batches, searchbench_queries
@@ -506,10 +508,19 @@ def server_config(engine, versions, args):
                 and os.path.realpath(configured) != os.path.realpath(binary)):
             common["binary_configured"] = configured
     else:
-        common.update({"version": versions[engine]["version"],
+        install = engine_install(engine, versions=versions)
+        # The server's own account of what it is, checked against the
+        # installation this result records.
+        served = request_json(args.host, args.port, "GET", "/", timeout=30).get("version", {})
+        check_served_version(engine, install, served)
+        common.update({"version": install["version"],
+                       "build": install["build"],
+                       "served_version": {key: served.get(key) for key in (
+                           "number", "build_hash", "build_date", "build_snapshot",
+                           "lucene_version")},
                        "store_backend": "lucene",
-                       "distribution": versions[engine]["distribution"],
-                       "license": versions[engine]["license"],
+                       "distribution": install["distribution"],
+                       "license": install["license"],
                        "transport_port": 9301 if engine == "opensearch" else 9302,
                        "node_count": 1})
     try:
