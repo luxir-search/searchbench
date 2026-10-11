@@ -509,7 +509,9 @@ separate from timed results.
 The default one-second replay warmup establishes connections; it does not
 establish steady-state JVM performance. Inspect repetition spread and trends,
 and rerun drifting cells across all compared engines with an explicitly
-longer `--warmup-seconds`. The result records that warmup duration.
+longer `--warmup-seconds`. The result records the configured bounds and, under
+`replay_warmup`, how long the warmup actually ran and how many requests it
+started.
 
 While writing the opaque replay workload, Searchbench captures the first
 request in every replay bucket. The result records its method, path, original

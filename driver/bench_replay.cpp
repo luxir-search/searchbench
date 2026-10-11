@@ -977,6 +977,14 @@ struct RepetitionResult {
   std::vector<BucketStats> buckets;
 };
 
+// The warmup phase as it actually ran: it ends at whichever of --warmup-seconds
+// and --warmup-requests comes first, so the configured bounds alone do not say
+// how much warming a cell got.
+struct WarmupResult {
+  double elapsed_s;
+  std::uint64_t requests;
+};
+
 std::string require_value(int argc, char** argv, int& index, const std::string& option) {
   if (++index >= argc) {
     throw std::runtime_error(option + " requires a value");
@@ -1309,6 +1317,7 @@ void write_per_bucket(std::ostream& output, const std::vector<std::string>& labe
 }
 
 std::string result_json(const Config& config, const Workload& workload,
+                        const std::optional<WarmupResult>& warmup,
                         const std::vector<RepetitionResult>& repetitions,
                         const std::vector<BucketStats>& aggregate,
                         const std::vector<ErrorSample>& errors) {
@@ -1319,6 +1328,7 @@ std::string result_json(const Config& config, const Workload& workload,
          << ",\"concurrency\":" << config.concurrency << ",\"threads\":"
          << config.threads << ",\"duration_s\":" << config.duration_s
          << ",\"max_requests\":" << config.max_requests
+         << ",\"warmup_s\":" << config.warmup_s
          << ",\"warmup_requests\":" << config.warmup_requests
          << ",\"repetitions\":" << config.repetitions << ",\"order\":"
          << json_escape(config.order) << ",\"seed\":";
@@ -1336,7 +1346,14 @@ std::string result_json(const Config& config, const Workload& workload,
     output << json_escape(std::to_string(bucket)) << ':'
            << json_escape(workload.labels()[bucket]);
   }
-  output << "}},\"repetitions\":[";
+  output << "}},\"warmup\":";
+  if (warmup.has_value()) {
+    output << "{\"elapsed_s\":" << warmup->elapsed_s
+           << ",\"requests\":" << warmup->requests << '}';
+  } else {
+    output << "null";
+  }
+  output << ",\"repetitions\":[";
   for (std::size_t index = 0; index < repetitions.size(); ++index) {
     if (index != 0) {
       output << ',';
@@ -1451,6 +1468,7 @@ int run(const Config& config) {
     }
   };
 
+  std::optional<WarmupResult> warmup;
   std::vector<RepetitionResult> repetitions;
   std::vector<BucketStats> aggregate(workload.labels().size());
   try {
@@ -1468,8 +1486,13 @@ int run(const Config& config) {
       phase.max_requests = config.warmup_requests;
       phase.min_requests = 0;
       phase.started.store(0, std::memory_order_relaxed);
+      TimePoint started = Clock::now();
       phase_barrier.arrive_and_wait();
       phase_barrier.arrive_and_wait();
+      // Every started request has finished by the second barrier.
+      warmup = WarmupResult{
+          std::chrono::duration<double>(Clock::now() - started).count(),
+          phase.started.load(std::memory_order_relaxed)};
       check_workers();
     }
     for (std::uint32_t repetition = 0; repetition < config.repetitions;
@@ -1519,7 +1542,7 @@ int run(const Config& config) {
       errors.push_back(error);
     }
   }
-  std::string json = result_json(config, workload, repetitions, aggregate, errors);
+  std::string json = result_json(config, workload, warmup, repetitions, aggregate, errors);
   std::ofstream destination(config.out_path);
   if (!destination) {
     throw std::runtime_error("open output " + config.out_path + " failed");

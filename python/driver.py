@@ -797,6 +797,10 @@ async def async_main(args):
         # assertions); measured reps check status/shape markers only.
         "warmup": {"requests": len(warmup[0]), "elapsed_s": warmup[3], "errors": 0,
                    "payloads_validated": True},
+        # The replay driver's timed warmup as it actually ran, between the
+        # validation phase above and the measured repetitions; null when none
+        # was configured. It ends at whichever configured bound comes first.
+        "replay_warmup": replay.get("warmup"),
         "repetitions": repetitions,
         "aggregate": aggregate,
         "memory": memory,
