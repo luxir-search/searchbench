@@ -21,7 +21,8 @@ import time
 
 from adapters import make_adapter
 from http_sync import request_json, stream_request
-from schema import LUXIR_SCHEMA
+from schema import (NUMERIC_POINTS_SETTINGS, luxir_schema, numeric_points_setting,
+                    numeric_posture)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
 from topology_probe import index_topology
 
@@ -191,6 +192,10 @@ def main():
                         help="concurrent /update connections (ingest-parallelism dimension)")
     parser.add_argument("--topology", choices=tuple(TOPOLOGIES),
                         help="named exact document-range topology")
+    parser.add_argument("--numeric-points", choices=NUMERIC_POINTS_SETTINGS,
+                        default=numeric_points_setting(),
+                        help="points index on numeric fields (default: "
+                             "$SEARCHBENCH_NUMERIC_POINTS, else none); see schema.py")
     parser.add_argument("--optimize", action="store_true")
     args = parser.parse_args()
     if args.streams < 1:
@@ -199,8 +204,10 @@ def main():
         parser.error("--topology requires committed range boundaries")
     if args.topology and args.optimize:
         parser.error("--topology cannot be combined with --optimize")
+    numeric = numeric_posture("luxir", args.numeric_points)
     request_json(args.host, args.port, "POST",
-                 f"/collections/{args.collection}/_schema", LUXIR_SCHEMA)
+                 f"/collections/{args.collection}/_schema",
+                 luxir_schema(numeric["points"]))
     started = time.monotonic()
     topology = resolve_topology(args.topology) if args.topology else None
     boundaries = None
@@ -225,6 +232,7 @@ def main():
                           "documents": topology.documents,
                           "boundaries": boundaries,
                       },
+                      "numeric_index": numeric,
                       "allow_dups": True,
                       "elapsed_s": round(elapsed, 3),
                       "docs_per_s": round(found / elapsed, 1) if found and elapsed else None},

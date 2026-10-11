@@ -26,7 +26,7 @@ from request_capture import capture_request, capture_response
 from results_io import write_context
 from sampler import AllocatorSampler, ProcSampler
 from schema import (ANALYZER_POSTURE, BODY_FIELD, IDENTITY_POSTURE,
-                    index_layout_version)
+                    index_layout_version, numeric_points_setting, numeric_posture)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
 from topology_probe import assert_quiescent_topology, index_topology
 from variants import client_settings, param_settings, parse_variant
@@ -474,7 +474,10 @@ def server_config(engine, versions, args):
               "server_cores": args.server_cores,
               "index_layout_version": index_layout_version(engine),
               "full_text": {"field": BODY_FIELD, **ANALYZER_POSTURE[engine]},
-              "identity": IDENTITY_POSTURE[engine]}
+              "identity": IDENTITY_POSTURE[engine],
+              # Campaign scripts feed and serve under one setting, and it is
+              # part of the dataset name (datasets.py).
+              "numeric_index": numeric_posture(engine, numeric_points_setting())}
     if engine == "luxir":
         configured = os.environ.get("LUXIR_BIN")
         luxir_repo = Path(os.environ.get("LUXIR_REPO", DEFAULT_LUXIR_REPO))

@@ -24,7 +24,8 @@ from presets import (GRID_NAMES, GRID_SELECTIVITIES, GRIDS, NUMERIC_COLUMNS,
                      resolve, resolve_grid_cell)
 from request_capture import captured_http_lines
 from results_io import load_result
-from schema import index_layout_version
+from schema import (index_layout_version, numeric_points_setting, numeric_posture,
+                    numeric_posture_label)
 
 DEFAULT_SERVER_CPUS, _DEFAULT_CLIENT_CPUS = current_cpu_sets()
 DEFAULT_SERVER_CORES = format_cpu_list(DEFAULT_SERVER_CPUS)
@@ -547,6 +548,17 @@ def run_engine(args):
     return 1 if failures else 0
 
 
+def numeric_index_matches(result, engine):
+    """Whether a cell's numeric fields carried the structures the current
+    numeric points posture builds. Cells recorded before the posture was
+    recorded ran each engine's default."""
+    recorded = (result.get("engine_config", {}).get("numeric_index")
+                or numeric_posture(engine, "default"))
+    expected = numeric_posture(engine, numeric_points_setting())
+    return ((recorded["points"], recorded["skipper"])
+            == (expected["points"], expected["skipper"]))
+
+
 def load_prev_results(outdir, engines, grid, lane, report, max_parallel=0):
     """Previous generation (.prev) of each cell, same guards as load_results.
     The corpus-sha check matters: a lane switch archives the OTHER lane's
@@ -567,6 +579,7 @@ def load_prev_results(outdir, engines, grid, lane, report, max_parallel=0):
             if (result.get("task_parameters") == params
                     and result.get("engine_config", {}).get("index_layout_version")
                     == index_layout_version(engine)
+                    and numeric_index_matches(result, engine)
                     and result.get("corpus", {}).get("sha256") == corpus_sha256):
                 results[(engine, selectivity, cardinality)] = result
     return results
@@ -627,12 +640,14 @@ def load_results(outdir, engines, grid, lane, report, max_parallel=0,
                         result = load_result(path)
                     except (OSError, ValueError):
                         continue
-                    # Hard gates: a different engine, task or corpus is a
-                    # different experiment, not a differently-labelled one.
+                    # Hard gates: a different engine, task, index structure or
+                    # corpus is a different experiment, not a differently-
+                    # labelled one.
                     if (result.get("engine") != engine
                             or result.get("task_class") != GRIDS[grid]["task"]
                             or result.get("engine_config", {}).get("index_layout_version")
                             != index_layout_version(engine)
+                            or not numeric_index_matches(result, engine)
                             or result.get("corpus", {}).get("sha256") != corpus_sha256):
                         continue
                     diff = param_difference(result.get("task_parameters"), params, inert)
@@ -724,8 +739,8 @@ def posture_lines(grid, results, engines, lane, report):
              f"Corpus `{corpus_name}`, "
              f"{report.get('documents', 0):,} docs, count_mode `{lane}`. "
              + request_shape_line(grid, params), "",
-             "| engine | version | segments | clients | max_parallel | duration x reps | cores server/client | store |",
-             "|---|---|---:|---:|---:|---|---|---|"]
+             "| engine | version | segments | clients | max_parallel | duration x reps | cores server/client | store | numeric index |",
+             "|---|---|---:|---:|---:|---|---|---|---|"]
     for engine in engines:
         if not any(key[0] == engine for key in results):
             continue
@@ -739,11 +754,16 @@ def posture_lines(grid, results, engines, lane, report):
             f"{spread(engine, lambda r: r['run_config']['repetitions'])} "
             f"| {spread(engine, lambda r: r['core_split']['server'])} / "
             f"{spread(engine, lambda r: r['core_split']['client'])} "
-            f"| {spread(engine, lambda r: r['engine_config']['store_backend'])} |")
+            f"| {spread(engine, lambda r: r['engine_config']['store_backend'])} "
+            f"| {spread(engine, lambda r: numeric_posture_label(r['engine_config']['numeric_index']))} |")
     lines += ["",
               "- `max_parallel` is translated into a request only by the luxir adapter. "
               "For both REST engines it is recorded but inert, which is why cells "
               "carrying different values still tabulate together (see comparable_hash).",
+              "- `numeric index` is what `sort_i`, `price_i` and `date_dt` carry: "
+              "a points (BKD) index, a doc-values skipper (per-block min/max; for "
+              "Luxir, its column zone maps), or both. Elasticsearch cannot build "
+              "both on one field.",
               "- Every cell records the complete serving topology before and after "
               "measurement, including live/deleted documents per segment. A topology "
               "change fails the cell.",

@@ -10,10 +10,16 @@
 # every cell is refed from scratch and discarded, so there is nothing to keep
 # and no reason to write it to the SSD.
 #
+# Numeric fields get no points index on any engine (SEARCHBENCH_NUMERIC_POINTS
+# defaults to off here; python/schema.py): every engine then builds the same
+# doc-values skipper Luxir's default numeric column carries, so the sweep
+# compares equal numeric indexing work.
+#
 # usage: INGEST_ENGINE=elasticsearch INGEST_CORPUS=/tmp/corpus.ndjson \
 #          scripts/ingest-streams.sh [streams...]
 set -euo pipefail
 export SEARCHBENCH_DATA_ROOT=${SEARCHBENCH_DATA_ROOT:-/tmp/searchbench-ingest}
+export SEARCHBENCH_NUMERIC_POINTS=${SEARCHBENCH_NUMERIC_POINTS:-off}
 source "$(dirname "$0")/engine-common.sh"
 
 ENGINE=${INGEST_ENGINE:-luxir}

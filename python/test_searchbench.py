@@ -39,7 +39,9 @@ from report import (client_saturation, fmt, fmt_memory_mib, index_shape_lines,
                     representative_request_lines, startup_lines,
                     undeclared_variation)
 from schema import (IDENTITY_POSTURE, LUXIR_ID_SCHEMA, index_layout_version,
-                    LUXIR_SCHEMA, REST_BODY_MAPPING, REST_ID_MAPPING)
+                    LUXIR_SCHEMA, NUMERIC_FIELDS, REST_BODY_MAPPING, REST_ID_MAPPING,
+                    luxir_schema, numeric_points_setting, numeric_posture,
+                    rest_numeric_mapping)
 from select_queries import select
 from topologies import Topology, assert_topology, resolve_topology
 from variants import (client_settings, filename, param_settings, parse_variant,
@@ -664,6 +666,79 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(IDENTITY_POSTURE["elasticsearch"]["internal_id"],
                          "auto_generated")
 
+    def test_numeric_posture_keeps_a_skipper_wherever_the_engine_can(self):
+        structures = {
+            (engine, setting): (numeric_posture(engine, setting)["points"],
+                                numeric_posture(engine, setting)["skipper"])
+            for engine in ("luxir", "opensearch", "elasticsearch")
+            for setting in ("default", "on", "off")}
+        self.assertEqual(structures, {
+            ("luxir", "default"): (False, True),
+            ("luxir", "on"): (True, True),
+            ("luxir", "off"): (False, True),
+            ("opensearch", "default"): (True, True),
+            ("opensearch", "on"): (True, True),
+            ("opensearch", "off"): (False, True),
+            # Elasticsearch builds a skipper only in place of points.
+            ("elasticsearch", "default"): (True, False),
+            ("elasticsearch", "on"): (True, False),
+            ("elasticsearch", "off"): (False, True),
+        })
+
+    def test_rest_numeric_mappings(self):
+        self.assertEqual(rest_numeric_mapping("opensearch", True), ({
+            "sort_i": {"type": "long", "skip_list": True},
+            "price_i": {"type": "integer", "skip_list": True},
+            "date_dt": {"type": "date", "skip_list": True}}, {}))
+        self.assertEqual(rest_numeric_mapping("opensearch", False), ({
+            "sort_i": {"type": "long", "index": False, "skip_list": True},
+            "price_i": {"type": "integer", "index": False, "skip_list": True},
+            "date_dt": {"type": "date", "index": False, "skip_list": True}}, {}))
+        self.assertEqual(rest_numeric_mapping("elasticsearch", True), ({
+            "sort_i": {"type": "long"},
+            "price_i": {"type": "integer"},
+            "date_dt": {"type": "date"}}, {}))
+        self.assertEqual(rest_numeric_mapping("elasticsearch", False), ({
+            "sort_i": {"type": "long", "index": False},
+            "price_i": {"type": "integer", "index": False},
+            "date_dt": {"type": "date", "index": False}},
+            {"mapping.use_doc_values_skipper": True}))
+        for field in NUMERIC_FIELDS:
+            self.assertNotIn(field, MAPPINGS["mappings"]["properties"])
+
+    def test_luxir_numeric_points_declare_range_fields(self):
+        self.assertIs(luxir_schema(False), LUXIR_SCHEMA)
+        schema = luxir_schema(True)
+        self.assertEqual({field: schema["fields"][field] for field in NUMERIC_FIELDS}, {
+            "sort_i": {"parent": "_i", "index": "range"},
+            "price_i": {"parent": "_i", "index": "range"},
+            "date_dt": {"parent": "_dt", "index": "range"}})
+        self.assertIs(schema["fields"]["body"], LUXIR_SCHEMA["fields"]["body"])
+        self.assertNotIn("sort_i", LUXIR_SCHEMA["fields"])
+
+    def test_numeric_points_setting_reads_the_environment(self):
+        with mock.patch.dict(os.environ, {"SEARCHBENCH_NUMERIC_POINTS": ""}):
+            self.assertEqual(numeric_points_setting(), "default")
+        with mock.patch.dict(os.environ, {"SEARCHBENCH_NUMERIC_POINTS": "on"}):
+            self.assertEqual(numeric_points_setting(), "on")
+            self.assertEqual(numeric_points_setting("off"), "off")
+        with mock.patch.dict(os.environ, {"SEARCHBENCH_NUMERIC_POINTS": "yes"}):
+            with self.assertRaisesRegex(ValueError, "SEARCHBENCH_NUMERIC_POINTS"):
+                numeric_points_setting()
+
+    def test_grid_cells_match_on_numeric_structures(self):
+        from grid import numeric_index_matches
+        legacy = {"engine_config": {}}
+        points = {"engine_config": {"numeric_index": numeric_posture("luxir", "on")}}
+        with mock.patch.dict(os.environ, {"SEARCHBENCH_NUMERIC_POINTS": "default"}):
+            self.assertTrue(numeric_index_matches(legacy, "luxir"))
+            self.assertFalse(numeric_index_matches(points, "luxir"))
+        with mock.patch.dict(os.environ, {"SEARCHBENCH_NUMERIC_POINTS": "on"}):
+            self.assertFalse(numeric_index_matches(legacy, "luxir"))
+            self.assertTrue(numeric_index_matches(points, "luxir"))
+            # Physically the same index as Elasticsearch's default.
+            self.assertTrue(numeric_index_matches(legacy, "elasticsearch"))
+
     def test_feeders_use_append_only_id_posture(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             corpus = Path(temp_dir) / "corpus.ndjson"
@@ -1053,6 +1128,15 @@ class SearchbenchUnitTest(unittest.TestCase):
                  dataset_name(standard, "tiered-5"),
                  dataset_name("corpus/corpus-10m-facet.ndjson", "as-fed")}), 4)
 
+    def test_dataset_names_separate_numeric_points_postures(self):
+        standard = "corpus/corpus-10m-searchbench.ndjson"
+        self.assertEqual(dataset_name(standard, "merged", "default"),
+                         "10m-searchbench-merged")
+        self.assertEqual(dataset_name(standard, "merged", "on"),
+                         "10m-searchbench-merged-points")
+        self.assertEqual(dataset_name(standard, "tiered-45", "off"),
+                         "10m-searchbench-tiered-45-nopoints")
+
     def test_dataset_name_rejects_an_undeclared_layout(self):
         with self.assertRaisesRegex(ValueError, "unknown index layout"):
             dataset_name("corpus/corpus-10m-searchbench.ndjson", "tiered-9")
@@ -1229,7 +1313,8 @@ class SearchbenchUnitTest(unittest.TestCase):
         with mock.patch("driver.resolve_running_binary", return_value=None), \
                 mock.patch("driver.git_head", return_value="configured-head"), \
                 mock.patch("driver.git_dirty", return_value=False), \
-                mock.patch.dict(os.environ, {"LUXIR_BIN": sys.executable}):
+                mock.patch.dict(os.environ, {"LUXIR_BIN": sys.executable,
+                                             "SEARCHBENCH_NUMERIC_POINTS": ""}):
             config = server_config("luxir", {}, args)
         self.assertEqual(config["binary_provenance"], "env")
         self.assertEqual(config["version"], "configured-head")
@@ -1238,6 +1323,8 @@ class SearchbenchUnitTest(unittest.TestCase):
             "field": "body", "tokenizer": "unicode_word", "filters": ["lowercase"],
             "long_terms": "truncate"})
         self.assertEqual(config["identity"], IDENTITY_POSTURE["luxir"])
+        self.assertEqual(config["numeric_index"]["points"], False)
+        self.assertEqual(config["numeric_index"]["skipper"], True)
         self.assertGreaterEqual(config["nofile_soft"], 1)
         self.assertGreaterEqual(config["nofile_hard"], config["nofile_soft"])
         self.assertEqual(config["startup"]["pid"], os.getpid())

@@ -8,7 +8,9 @@ import time
 
 from adapters import make_adapter
 from http_sync import request_bytes, request_json
-from schema import BODY_FIELD, ID_FIELD, REST_BODY_MAPPING, REST_ID_MAPPING
+from schema import (BODY_FIELD, ID_FIELD, NUMERIC_POINTS_SETTINGS, REST_BODY_MAPPING,
+                    REST_ID_MAPPING, numeric_points_setting, numeric_posture,
+                    rest_numeric_mapping)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
 from topology_probe import index_topology
 
@@ -29,7 +31,8 @@ MAPPINGS = {
             # exact lookup and doc values serve hit projection.
             ID_FIELD: REST_ID_MAPPING,
             BODY_FIELD: REST_BODY_MAPPING,
-            "sort_i": {"type": "long"},
+            # sort_i, price_i and date_dt come from rest_numeric_mapping: their
+            # points and skipper depend on the numeric posture.
             "cat_s": {"type": "keyword"},
             "cat100_s": {"type": "keyword"},
             "cat1k_s": {"type": "keyword"},
@@ -45,9 +48,7 @@ MAPPINGS = {
             "sel10_s": {"type": "keyword"},
             "sel1_s": {"type": "keyword"},
             "sel01_s": {"type": "keyword"},
-            "sel001_s": {"type": "keyword"},
-            "date_dt": {"type": "date"},
-            "price_i": {"type": "integer"}
+            "sel001_s": {"type": "keyword"}
         }
     }
 }
@@ -258,6 +259,11 @@ def main():
                              "control; requires --clients 1)")
     parser.add_argument("--topology", choices=tuple(TOPOLOGIES),
                         help="named exact document-range topology")
+    parser.add_argument("--numeric-points", choices=NUMERIC_POINTS_SETTINGS,
+                        default=numeric_points_setting(),
+                        help="points index on numeric fields (default: "
+                             "$SEARCHBENCH_NUMERIC_POINTS, else the engine default); "
+                             "see schema.py")
     parser.add_argument("--settings", default=None,
                         help="JSON object of index settings merged over the "
                              "campaign posture (ingest-tuning experiments)")
@@ -295,6 +301,11 @@ def main():
         # Facet-variant corpus carries no text; a mapped-but-absent text field
         # would be free, but the mapping should describe the index honestly.
         del mappings["mappings"]["properties"][BODY_FIELD]
+    numeric = numeric_posture(args.engine, args.numeric_points)
+    numeric_properties, numeric_settings = rest_numeric_mapping(
+        args.engine, numeric["points"])
+    mappings["mappings"]["properties"].update(numeric_properties)
+    mappings["settings"].update(numeric_settings)
     if args.engine == "opensearch":
         # Accurate-to-accurate default posture (bench mode table): OS 3.x
         # concurrent segment search makes single-shard terms aggs APPROXIMATE
@@ -374,6 +385,7 @@ def main():
                       "clients": args.clients,
                       "batch_docs": args.batch_docs,
                       "index_settings": mappings["settings"],
+                      "numeric_index": numeric,
                       "internal_id": "auto_generated",
                       "topology": None if topology is None else {
                           "name": topology.name,

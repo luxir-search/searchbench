@@ -59,6 +59,17 @@ BASELINE_TOPOLOGY=tiered-45 scripts/run-isolated.sh scripts/run-baseline.sh
 scripts/run-isolated.sh scripts/quick.sh -T tiered-45 -t HIGH_TERM_TOP_10
 ```
 
+`SEARCHBENCH_NUMERIC_POINTS=on|off` feeds and serves numeric fields with or
+without a points index on every engine, instead of each engine's default
+([numeric posture](docs/full-text-benchmark.md#other-standard-corpus-fields)).
+`on` is how Luxir is measured with points. The setting suffixes dataset
+names and the default grid and baseline result directories (`-points`,
+`-nopoints`), so the variant never displaces the default index or its results:
+
+```bash
+SEARCHBENCH_NUMERIC_POINTS=on scripts/run-isolated.sh scripts/grid.sh -e luxir
+```
+
 ```bash
 scripts/run-isolated.sh scripts/quick.sh \
   -t HIGH_PHRASE_TOP_10,MED_SLOPPY_PHRASE_TOP_10,AND_HIGH_LOW_COUNT

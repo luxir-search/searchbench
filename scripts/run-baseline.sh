@@ -39,13 +39,13 @@ WARMUP_SECONDS=${BASELINE_WARMUP_SECONDS:-0}
 DEFAULT_TASKS=$(python3 -c "import sys; sys.path.insert(0, '$PY'); \
 from presets import FULL_TEXT_TASKS; print(' '.join(FULL_TEXT_TASKS))")
 TASKS=(${BASELINE_TASKS:-$DEFAULT_TASKS FACET_10 FACET_1K FACET_HC FACET_DATE FACET_MULTI DEEP_COLLECT})
-OUTDIR=${BASELINE_OUTDIR:-$ROOT/results/baseline-$LANE}
 if [[ "$CORPUS" == "$DEFAULT_CORPUS" ]]; then
   "$ROOT/scripts/prepare-corpus.sh" standard
 fi
 [[ -s "$CORPUS" ]] || { echo "missing corpus: $CORPUS" >&2; exit 1; }
 
 source "$ROOT/scripts/engine-common.sh"
+OUTDIR=${BASELINE_OUTDIR:-$ROOT/results/baseline-$LANE$(numeric_points_suffix)} || exit 2
 ensure_driver || exit 1
 TOPOLOGY=${BASELINE_TOPOLOGY:-}
 LAYOUT=${TOPOLOGY:-merged}

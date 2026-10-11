@@ -183,10 +183,30 @@ The shared 10M corpus also contains:
 Luxir resolves these through its suffix templates: `_s` is an exact-match
 index plus column, while `_i` and `_dt` are columns without a points index.
 OpenSearch and Elasticsearch map the strings as `keyword`, `sort_i` as
-`long`, `price_i` as `integer`, and `date_dt` as `date`, using their normal
-indexed and doc-value defaults. These physical structures are not identical,
-but the full-text tasks do not query them. They remain present because one
-baseline index supports the complete development suite.
+`long`, `price_i` as `integer`, and `date_dt` as `date`. These physical
+structures are not identical, but the full-text tasks do not query them. They
+remain present because one baseline index supports the complete development
+suite.
+
+Numeric fields keep a doc-values skipper (per-block minimum and maximum, which
+lets range filters, sort pruning and histograms skip blocks) wherever an engine
+can build one. `SEARCHBENCH_NUMERIC_POINTS` decides whether a points (BKD)
+index sits beside it:
+
+| Setting | Luxir | OpenSearch | Elasticsearch |
+|---|---|---|---|
+| `default` | column with zone maps, no points | points plus `skip_list` | points, no skipper |
+| `on` | `index: "range"` adds points | points plus `skip_list` | points, no skipper |
+| `off` | column with zone maps, no points | `index: false` plus `skip_list` | `index: false` with `index.mapping.use_doc_values_skipper` |
+
+Luxir's zone maps are its skipper: every numeric column records the exact
+minimum and maximum of each 4,096 values and each 512. Elasticsearch cannot
+build points and a skipper on the same field; it builds a skipper only for a
+field that is not indexed. Query campaigns run `default`, so each engine
+serves its own default structures. The ingest benchmarks
+(`scripts/ingest-streams.sh`, `scripts/sustained-ingest.sh`) run `off`, so every
+engine does the same numeric indexing work as Luxir's default column. `on`
+measures Luxir with a points index.
 
 Both REST mappings use `dynamic: strict`, so a corpus/schema mismatch fails
 the feed instead of silently creating a new text field.
@@ -214,7 +234,8 @@ dimension for whichever engine you point it at.
 
 Transport block and bulk sizes are native API choices, not a claimed common
 unit of indexing work. Each fed shape owns a data directory named after its
-corpus and layout, `data/<engine>/<corpus>-<layout>`, because an engine opens
+corpus and layout, `data/<engine>/<corpus>-<layout>`, with a `-points` or
+`-nopoints` suffix under a non-default numeric points setting, because an engine opens
 every index in its data directory: the standard force-merged campaign, a
 constructed tiered topology, the acceptance corpus, and the facet corpus
 coexist instead of displacing one another, and each stays reusable. A run

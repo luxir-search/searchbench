@@ -69,6 +69,16 @@ dataset_name() {
   PYTHONPATH="$ROOT/python" python3 "$ROOT/python/datasets.py" "$@"
 }
 
+# What SEARCHBENCH_NUMERIC_POINTS (python/schema.py) adds to dataset names:
+# nothing for the engines' default posture, -points or -nopoints otherwise.
+# Default result trees carry it too, so a run under another posture never
+# overwrites or mixes with default cells.
+numeric_points_suffix() {
+  PYTHONPATH="$ROOT/python" python3 -c "from datasets import NUMERIC_POINTS_SUFFIX
+from schema import numeric_points_setting
+print(NUMERIC_POINTS_SUFFIX[numeric_points_setting()])"
+}
+
 STANDARD_CORPUS="$ROOT/corpus/corpus-10m-searchbench.ndjson"
 # Exported so a campaign that selects a dataset keeps it across the start
 # scripts it invokes; unset means the standard force-merged 10M campaign.

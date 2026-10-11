@@ -143,7 +143,8 @@ SEARCHBENCH_DATASET=$(dataset_name "$CORPUS" "$GRID_LAYOUT") || exit 2
 # posture. It produces a distinct parameter hash.
 # One result tree per grid. GRID_OUTDIR pins a single directory, so set it
 # only when running one grid.
-grid_outdir() { echo "${GRID_OUTDIR:-$ROOT/results/$1-grid}"; }
+NUMERIC_SUFFIX=$(numeric_points_suffix) || exit 2
+grid_outdir() { echo "${GRID_OUTDIR:-$ROOT/results/$1-grid$NUMERIC_SUFFIX}"; }
 if [[ "$CORPUS" == "$DEFAULT_CORPUS" ]]; then
   "$ROOT/scripts/prepare-corpus.sh" facet
 fi

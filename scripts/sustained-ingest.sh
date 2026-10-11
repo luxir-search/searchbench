@@ -4,6 +4,8 @@
 # segment counts show whether merging keeps up DURING ingest; commit tail last.
 set -euo pipefail
 export SEARCHBENCH_DATA_ROOT=${SEARCHBENCH_DATA_ROOT:-/tmp/searchbench-ingest}
+# Same numeric posture as ingest-streams.sh: no points index, skipper only.
+export SEARCHBENCH_NUMERIC_POINTS=${SEARCHBENCH_NUMERIC_POINTS:-off}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 source "$ROOT/scripts/engine-common.sh"
 CORPUS=${CORPUS:-$ROOT/corpus/corpus-10m-searchbench.ndjson}
