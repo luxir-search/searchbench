@@ -73,9 +73,10 @@ def _facet_doc(payload):
                    "per-bucket payload - the delta between them IS its cost.",
         "columns_are": "the faceted field",
         "notes": [
-            "- The 100% row is an unfiltered domain. Read it separately from "
-            "filtered rows because an engine may answer it from global field "
-            "statistics rather than collecting matching documents.",
+            "- The 100% row is the unfiltered domain, where an engine can answer "
+            "from index statistics instead of collecting matching documents. "
+            "How far each engine's statistics reach (which fields, cardinalities "
+            "and per-bucket payloads) is part of what the row measures.",
         ],
     }
 
