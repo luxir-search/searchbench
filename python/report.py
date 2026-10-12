@@ -461,24 +461,33 @@ def _core_count(spec):
         return None
 
 
+def client_bound(result):
+    """(cores busy, thread ceiling) when a cell's replay threads ran near
+    saturation, so its QPS is a client ceiling rather than an engine
+    measurement; None otherwise."""
+    busy = (result.get("aggregate", {}).get("client_cpu") or {}).get("cores_busy")
+    if busy is None:
+        return None
+    threads = result.get("run_config", {}).get("replay_threads") or 1
+    cores = _core_count(result.get("core_split", {}).get("client"))
+    ceiling = min(threads, cores) if cores else threads
+    return (busy, ceiling) if busy >= 0.85 * ceiling else None
+
+
 def client_saturation(results):
     """Cells whose replay threads ran near saturation: the recorded QPS is a
     client ceiling, not an engine measurement."""
     notes = []
     for (engine, task, vkey) in sorted(results):
-        result = results[(engine, task, vkey)]
-        busy = (result.get("aggregate", {}).get("client_cpu") or {}).get("cores_busy")
-        if busy is None:
+        bound = client_bound(results[(engine, task, vkey)])
+        if bound is None:
             continue
-        threads = result.get("run_config", {}).get("replay_threads") or 1
-        cores = _core_count(result.get("core_split", {}).get("client"))
-        ceiling = min(threads, cores) if cores else threads
-        if busy >= 0.85 * ceiling:
-            label = f" @{variant_label(vkey)}" if json.loads(vkey) else ""
-            notes.append(
-                f"{engine} `{task}`{label}: replay client busy {busy} of "
-                f"{ceiling} thread(s); the cell may be client-bound "
-                f"(raise the `threads` variant or discount its QPS)")
+        busy, ceiling = bound
+        label = f" @{variant_label(vkey)}" if json.loads(vkey) else ""
+        notes.append(
+            f"{engine} `{task}`{label}: replay client busy {busy} of "
+            f"{ceiling} thread(s); the cell may be client-bound "
+            f"(raise the `threads` variant or discount its QPS)")
     return notes
 
 

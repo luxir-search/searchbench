@@ -91,6 +91,14 @@ REPLAY_WARMUP=${REPLAY_WARMUP:-3}
 # the JVMs - luxir for first-use structures and mmap page faults. 0 disables.
 WARM_PASSES=${WARM_PASSES:-2}
 CONCURRENCY=8       # -C 32/64 for saturation runs (recorded in run_config, not param_hash)
+# Replay threads serving those connections (-t; at most one per connection,
+# so the default gives every client its own thread). One thread saturates at
+# about 137k QPS: it capped Luxir's 100% and 0.01% rows on the 2026-10-11
+# series with the server 3-4 cores busy. Measured on those cells (munin,
+# 2026-10-12): 1 -> 2 -> 4 -> 8 threads gave 138k -> 246k -> 260k -> 263k QPS
+# on 100%/10, while server-bound cells moved under 3%. The report marks any
+# cell whose client still ran near saturation.
+REPLAY_THREADS=${REPLAY_THREADS:-8}
 MAXPAR=0            # luxir max_parallel. 0 (default) = luxir's serving
                     # default and the full-text campaigns' posture: serial,
                     # inline on the connection thread (keep CONCURRENCY <=
@@ -98,7 +106,7 @@ MAXPAR=0            # luxir max_parallel. 0 (default) = luxir's serving
                     # (carries idle-arena churn on fast cells); -1 = the
                     # parallel lane. In params: a luxir cell run under another
                     # value reports as approximate against this one.
-while getopts "e:g:d:l:s:c:w:C:P:R:W:r:x" opt; do
+while getopts "e:g:d:l:s:c:w:C:P:R:W:r:t:x" opt; do
   case $opt in
     e) ENGINES=$OPTARG ;;
     g) GRID=$OPTARG ;;           # which grid(s) - see the header
@@ -112,6 +120,7 @@ while getopts "e:g:d:l:s:c:w:C:P:R:W:r:x" opt; do
     c) CARDS=$OPTARG ;;
     w) WARMUP_QUERIES=$OPTARG ;;
     C) CONCURRENCY=$OPTARG ;;
+    t) REPLAY_THREADS=$OPTARG ;;
     P) MAXPAR=$OPTARG ;;
     *) exit 2 ;;
   esac
@@ -190,6 +199,7 @@ for engine in ${ENGINES//,/ }; do
       --corpus "$CORPUS" --documents "$CORPUS_DOCS" --outdir "$(grid_outdir "$grid")" \
       --selectivities "$SELS" --cardinalities "$CARDS" \
       --max-source-queries "$WARMUP_QUERIES" --concurrency "$CONCURRENCY" \
+      --replay-threads "$REPLAY_THREADS" \
       --replay-warmup "$REPLAY_WARMUP" --warm-passes "$WARM_PASSES" \
       --max-requests "$MAX_REQUESTS" --warmup-requests "$WARMUP_REQUESTS" \
       --repetitions "$REPETITIONS" --server-cores "$SERVER_CORES" \

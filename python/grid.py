@@ -22,6 +22,7 @@ from controls import health_control_lines, record_health_control
 from presets import (GRID_NAMES, GRID_SELECTIVITIES, GRIDS, NUMERIC_COLUMNS,
                      STRING_COLUMNS, designated_values, grid_columns, param_hash,
                      resolve, resolve_grid_cell)
+from report import client_bound
 from request_capture import captured_http_lines
 from installs import build_identity, selected_build_identity, version_label
 from results_io import load_result
@@ -522,6 +523,9 @@ def run_engine(args):
                    "--max-requests", str(args.max_requests),
                    "--warmup-requests", str(args.warmup_requests),
                    "--concurrency", str(args.concurrency),
+                   # At most one replay thread per connection (the driver's
+                   # limit), so -C below the thread count still runs.
+                   "--threads", str(min(args.replay_threads, args.concurrency)),
                    "--corpus", args.corpus, "--label", f"{args.grid}-grid",
                    "--output", str(output)] + grid_overrides(args.grid, params, args.lane)
         print(f"{args.engine} selectivity={selectivity}% column={cardinality}",
@@ -760,7 +764,7 @@ def posture_lines(grid, results, engines, lane, report):
              f"Corpus `{corpus_name}`, "
              f"{report.get('documents', 0):,} docs, count_mode `{lane}`. "
              + request_shape_line(grid, params), "",
-             "| engine | version | segments | clients | max_parallel | warmup + duration x reps | cores server/client | store | numeric index |",
+             "| engine | version | segments | clients / replay threads | max_parallel | warmup + duration x reps | cores server/client | store | numeric index |",
              "|---|---|---:|---:|---:|---|---|---|---|"]
     for engine in engines:
         if not any(key[0] == engine for key in results):
@@ -769,7 +773,8 @@ def posture_lines(grid, results, engines, lane, report):
             f"| {engine} "
             f"| {spread(engine, lambda r: version_label(r['engine_config']))} "
             f"| {spread(engine, lambda r: r['index_topology']['before']['segment_count'])} "
-            f"| {spread(engine, lambda r: r['run_config']['concurrency'])} "
+            f"| {spread(engine, lambda r: r['run_config']['concurrency'])} / "
+            f"{spread(engine, lambda r: r['run_config']['replay_threads'])} "
             f"| {spread(engine, lambda r: r['task_parameters']['max_parallel'])} "
             f"| {spread(engine, warmup_label)} + "
             f"{spread(engine, lambda r: r['run_config']['duration_per_repetition_s'])}s x "
@@ -908,7 +913,10 @@ def render_tables(grid, results, engines, lane, report, prev_results=None,
              "Luxir cells append QPS relative to elasticsearch and opensearch "
              "(`.. / ESx / OSx`, >1 = luxir faster), and when a same-corpus "
              "previous run exists, the change in server work "
-             "(`+N%cpu` = more cpu_ms/request than the previous run).", "",
+             "(`+N%cpu` = more cpu_ms/request than the previous run). `†` marks "
+             "a client-bound cell: its replay threads ran near saturation, so its "
+             "QPS is the client's ceiling, not the engine's; its server CPU per "
+             "request is still the engine's.", "",
              "Every result filename and JSON carries the exact resolved param_hash. Cells "
              "are matched on the parameters that actually shaped the request, so a "
              "parameter an engine's adapter ignores (max_parallel, which only luxir "
@@ -936,6 +944,8 @@ def render_tables(grid, results, engines, lane, report, prev_results=None,
                     cells.append("missing")
                     continue
                 cell = f"{qps:.0f} / {p50:.2f}"
+                if client_bound(result):
+                    cell += " †"
                 if result.get("_param_diff"):
                     approximate.setdefault(engine, {}).update(result["_param_diff"])
                 if engine == "luxir":
@@ -1070,6 +1080,7 @@ def main():
                      default=os.environ.get("SERVER_CORES", DEFAULT_SERVER_CORES))
     run.add_argument("--max-parallel", type=int, default=0)
     run.add_argument("--concurrency", type=int, default=8)
+    run.add_argument("--replay-threads", type=int, default=8)
     run.set_defaults(func=run_engine)
 
     validate = subparsers.add_parser("validate-report")
