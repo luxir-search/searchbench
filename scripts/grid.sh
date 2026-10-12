@@ -96,7 +96,7 @@ CONCURRENCY=8       # -C 32/64 for saturation runs (recorded in run_config, not 
 # about 137k QPS: it capped Luxir's 100% and 0.01% rows on the 2026-10-11
 # series with the server 3-4 cores busy. Measured on those cells (munin,
 # 2026-10-12): 1 -> 2 -> 4 -> 8 threads gave 138k -> 246k -> 260k -> 263k QPS
-# on 100%/10, while server-bound cells moved under 3%. The report marks any
+# on 100%/10, while server-bound cells moved at most 3%. The report marks any
 # cell whose client still ran near saturation.
 REPLAY_THREADS=${REPLAY_THREADS:-8}
 MAXPAR=0            # luxir max_parallel. 0 (default) = luxir's serving
