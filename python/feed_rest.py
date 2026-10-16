@@ -12,7 +12,7 @@ from schema import (BODY_FIELD, ID_FIELD, NUMERIC_POINTS_SETTINGS, REST_BODY_MAP
                     REST_ID_MAPPING, numeric_points_setting, numeric_posture,
                     rest_numeric_mapping)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
-from topology_probe import index_topology
+from topology_probe import assert_quiescent_topology, index_topology
 
 MAPPINGS = {
     "settings": {
@@ -236,6 +236,32 @@ def feed_topology(args, topology, send_bulk):
     return totals, boundaries
 
 
+def settle(args, port, headers):
+    """Flush, refresh and wait until the serving reader has no active merge.
+
+    A refresh makes documents searchable but neither commits them nor waits
+    for the merges the feed scheduled, and replay refuses an index with an
+    uncommitted segment or an active merge.
+    """
+    adapter = make_adapter(args.engine, args.index)
+    started = time.monotonic()
+    while True:
+        for operation in ("_flush?wait_if_ongoing=true", "_refresh"):
+            response = request_json(args.host, port, "POST", f"/{args.index}/{operation}",
+                                    headers=headers, timeout=600)
+            if response.get("_shards", {}).get("failed", 0):
+                raise RuntimeError(f"{operation} failed: {response}")
+        topology = index_topology(adapter, args.host, port, timeout=120)
+        try:
+            assert_quiescent_topology(topology)
+            return {"waited_s": round(time.monotonic() - started, 3),
+                    "segments": topology["segment_count"]}
+        except RuntimeError:
+            if time.monotonic() - started >= args.settle_timeout:
+                raise
+            time.sleep(1)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("engine", choices=("opensearch", "elasticsearch"))
@@ -270,6 +296,13 @@ def main():
     parser.add_argument("--reset", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--refresh", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--optimize", action="store_true")
+    parser.add_argument("--settle", action=argparse.BooleanOptionalAction, default=True,
+                        help="after a refreshed feed without a topology, flush and wait "
+                             "for active merges outside the timed interval, so replay "
+                             "gets a committed, quiescent index (a topology feed is "
+                             "already committed and merged)")
+    parser.add_argument("--settle-timeout", type=float, default=600.0,
+                        help="seconds to wait for merges to finish when settling")
     args = parser.parse_args()
     if args.topology and args.flush_every:
         parser.error("--topology and --flush-every are mutually exclusive")
@@ -380,6 +413,8 @@ def main():
         assert_topology(topology, final_topology)
     elapsed = time.monotonic() - started
     count = request_json(args.host, port, "GET", f"/{args.index}/_count", headers=headers)
+    settled = (settle(args, port, headers)
+               if args.settle and args.refresh and not topology else None)
     print(json.dumps({"bulk_batches": state["batches"],
                       "bulk_took_ms": state["took"],
                       "clients": args.clients,
@@ -401,6 +436,7 @@ def main():
                                   mappings["settings"]["merge.policy.segments_per_tier"],
                           },
                       },
+                      "settle": settled,
                       "elapsed_s": round(elapsed, 3),
                       "docs_per_s": round(count.get("count", 0) / elapsed, 1) if elapsed else None,
                       "count": count.get("count")}, indent=2))

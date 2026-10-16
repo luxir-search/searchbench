@@ -328,11 +328,14 @@ Feed throughput is diagnostic in this baseline, not yet a competitive indexing
 metric. Luxir publishes one commit at the end, while the REST engines use their
 request-durable translogs throughout the feed. Luxir's final commit waits for
 its scheduled merges; the REST feed performs a refresh but does not explicitly
-wait for every background merge to finish. The later one-segment maintenance
-step controls query topology but does not make the preceding feed rates a
-competitive indexing comparison. Such a comparison must first choose and
-document one durability contract and one end-of-feed merge boundary for all
-three engines.
+wait for every background merge to finish within the timed interval. After
+timing, the REST feeder flushes and waits until no merge is active, so an
+as-fed index is committed and quiescent before replay checks its topology
+(`--no-settle` skips this for ingest sweeps that discard the index). The later
+one-segment maintenance step controls query topology but does not make the
+preceding feed rates a competitive indexing comparison. Such a comparison must
+first choose and document one durability contract and one end-of-feed merge
+boundary for all three engines.
 
 ## Query workload
 

@@ -43,8 +43,9 @@ for streams in "${STREAMS[@]}"; do
     python3 "$ROOT/python/feed_luxir.py" "$CORPUS" --streams "$streams" \
       > "$OUT/streams-$streams.json" || status=$?
   else
+    # The index is measured and discarded: no settle wait before replay.
     python3 "$ROOT/python/feed_rest.py" "$ENGINE" "$CORPUS" --port "$PORT" \
-      --clients "$streams" ${FEED_EXTRA_ARGS:-} \
+      --clients "$streams" --no-settle ${FEED_EXTRA_ARGS:-} \
       > "$OUT/streams-$streams.json" || status=$?
   fi
   du -sb "$dir" > "$OUT/streams-$streams.bytes" 2>/dev/null || true
