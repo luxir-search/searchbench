@@ -10,10 +10,11 @@ mkdir -p "$ROOT/run" "$DATA_DIR" "$ROOT/logs"
 echo "luxir dataset: $SEARCHBENCH_DATASET" >&2
 [[ ! -f "$PIDFILE" ]] || { echo "Luxir pidfile already exists: $PIDFILE" >&2; exit 1; }
 raise_nofile_limit
-# Same posture variable the REST start scripts consume (engine-common.sh):
-# off = no query cache, so repeated identical queries measure execution.
+# Query-cache posture shared with the REST engines (engine-common.sh): off by
+# default, so repeated identical queries measure execution.
+POSTURE=$(query_cache_posture) || exit 2
 CACHE_ARGS=""
-[[ "${SEARCHBENCH_QUERY_CACHE:-}" == off ]] && CACHE_ARGS="--query-cache-bytes=0"
+[[ $POSTURE == off ]] && CACHE_ARGS="--query-cache-bytes=0"
 taskset -c "$SERVER_CORES" "$BIN" \
   --log-level=warn \
   --server.http.port=9400 \

@@ -29,8 +29,11 @@ from presets import parse_override
 
 # key -> driver default (an explicit default is normalized away)
 CLIENT_KEYS = {"concurrency": 8, "threads": 1}
-# key -> environment variable the start scripts consume
-SERVER_KEYS = {"heap": "SEARCHBENCH_HEAP"}
+# key -> environment variable the start scripts consume. query_cache=on|off
+# flips the engine's query/filter cache; the start scripts default it to off
+# (engine-common.sh query_cache_posture) and the driver records what the engine
+# reports (engine_config.query_cache).
+SERVER_KEYS = {"heap": "SEARCHBENCH_HEAP", "query_cache": "SEARCHBENCH_QUERY_CACHE"}
 # slug abbreviations for the common ladder keys; other keys render key=value
 SLUG_ABBREV = {"concurrency": "c", "threads": "t"}
 

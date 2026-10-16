@@ -51,6 +51,7 @@ the [control workflow](../README.md#luxir-healthcheck-control) for custom runs.
 | Storage | filesystem | Lucene filesystem index | Lucene filesystem index | Use each engine's normal persistent local backend. |
 | Managed heap | none | 8 GiB fixed JVM heap | 8 GiB fixed JVM heap | Give both JVM references the same explicit heap; total and anonymous RSS are recorded for all engines. |
 | Open files | at least 65,536 soft | at least 65,536 soft | at least 65,536 soft | Prevent the launching shell's limit from becoming a scale-ingest failure. |
+| Query/filter cache | off (`--query-cache-bytes=0`) | off (`index.queries.cache.enabled: false`) | off (`index.queries.cache.enabled: false`) | Each luceneutil class has 7-50 distinct queries replayed thousands of times per window, so with a cache on, warmup caches every result and the cells measure cache hits instead of execution. A cache-on run is the declared server variant `query_cache=on`; each result records the state the engine reports as `engine_config.query_cache`. |
 
 See the [isolated-network workflow](../README.md#isolated-network-runs) for
 preparation, process cleanup, CPU policy, and recorded network provenance.
@@ -484,9 +485,11 @@ Count tasks return no documents. In the `exact` lane, Luxir sets
 `get_number:true` and the REST engines set `track_total_hits:true`. The REST
 shard request cache is explicitly disabled for every benchmark search shape,
 including top-N, count, facet, and GET. This prevents a repeated request from
-returning a cached whole response; it does not disable Lucene's query/filter
-cache. The cached-response posture remains available only as an explicit
-`request_cache=true` A/B. The separate `skip` lane omits exact-total work where
+returning a cached whole response. The query/filter cache is off as well (see
+the engine settings above). The cached-response posture remains available only
+as an explicit `request_cache=true` A/B, and a cached-filter posture only as
+the `query_cache=on` server variant. The facet grid and the cache-first gate
+keep the query cache on, because there a cached filter is the fixture. The separate `skip` lane omits exact-total work where
 the engine permits it and has a distinct parameter identity.
 
 Before timed replay, every request in the workload receives an untimed request

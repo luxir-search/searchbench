@@ -363,6 +363,7 @@ def startup_lines(results):
                 f"- Executable: `{startup.get('executable', 'N/A')}`",
                 f"- Working directory: `{startup.get('working_directory', 'N/A')}`",
                 f"- Observed CPU affinity: `{config.get('observed_cpus_allowed_list', 'N/A')}`",
+                f"- Observed query cache: `{config.get('query_cache', 'N/A')}`",
                 f"- Observed `nofile`: soft `{config.get('nofile_soft', 'N/A')}`, "
                 f"hard `{config.get('nofile_hard', 'N/A')}`",
                 f"- Exact cmdline SHA-256: `{startup.get('cmdline_sha256', 'N/A')}`",
@@ -406,6 +407,11 @@ def undeclared_variation(results):
                 residual[rname].add(run.get(rname))
         for rname in CAMPAIGN_KNOBS:
             residual[rname].add(run.get(rname))
+        # Server posture a variant may declare (variants.SERVER_KEYS) but
+        # that a server left running, or an exported variable, can also set.
+        if "query_cache" not in declared:
+            residual["query_cache"].add(
+                result.get("engine_config", {}).get("query_cache", "unrecorded"))
         # Allocator polling is server work inside the measured interval.
         residual["allocator_stats_ms"].add(
             result.get("memory", {}).get("allocator", {}).get("interval_ms"))

@@ -27,6 +27,9 @@ set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 source "$ROOT/scripts/engine-common.sh"
+# The cached selectivity filter is this board's fixture: keep the query
+# cache on unless the caller says otherwise (query_cache_posture defaults off).
+export SEARCHBENCH_QUERY_CACHE=${SEARCHBENCH_QUERY_CACHE:-on}
 set +e
 
 ENGINES="luxir"

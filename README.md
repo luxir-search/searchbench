@@ -78,7 +78,7 @@ scripts/run-isolated.sh scripts/quick.sh \
 Experiment dimensions are declared variants (`python/variants.py`):
 comma-separated `key=value` deviations from the campaign baseline. Client
 posture keys (`concurrency`, `threads`) set the replay driver, server posture
-keys (`heap`) restart the server per posture group, and any other key
+keys (`heap`, `query_cache`) restart the server per posture group, and any other key
 overrides a task parameter. Every task cell runs once per variant, results
 land in slug-suffixed files (`luxir-HIGH_TERM_TOP_10@c16.json`), and the
 report pivots the variant axis into column groups while warning about any
@@ -90,6 +90,14 @@ BASELINE_VARIANTS="concurrency=1 concurrency=8 concurrency=16" \
 scripts/run-isolated.sh scripts/quick.sh -t HIGH_TERM_TOP_10 -v concurrency=1 -v - -v concurrency=16
 scripts/run-isolated.sh scripts/quick.sh -t FACET_10 -v facet_limit=100
 ```
+
+The query/filter cache is off unless declared otherwise
+(`BASELINE_VARIANTS="- query_cache=on"`): the luceneutil classes repeat a few
+dozen queries per class, so a cache turns their cells into cache-hit
+measurements. `quick.sh` takes no server-posture variant; it follows
+`SEARCHBENCH_QUERY_CACHE=on|off` (default off) and restarts an engine left
+running with the other setting. The facet grid and the cache-first gate
+default it to on.
 
 The default full-text cells use luceneutil's term, AND, OR, phrase, and sloppy
 phrase tasks split by source-corpus frequency. The older broad AOL-derived

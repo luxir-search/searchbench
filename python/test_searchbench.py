@@ -29,6 +29,7 @@ from import_luceneutil_queries import (REGEX_TASKS, escape_pattern, escape_term,
 from presets import (BENCHMARK_GAME_TASKS, FULL_TEXT_TASKS, GRIDS, METRIC1,
                      PRESETS, STABLE_FILTER_TASKS, comparable_hash, param_hash, resolve,
                      resolve_grid_cell)
+from query_cache import observed_query_cache
 from query_source import (BENCHMARK_GAME_QUERY_CLASSES, DERIVED_QUERY_CLASSES,
                           LUCENEUTIL_CLASS_MAP, PRIMARY_QUERY_CLASSES,
                           QueryItem, classify, read_id_batches,
@@ -460,6 +461,9 @@ class SearchbenchUnitTest(unittest.TestCase):
                          "luxir-TOP_10@c16.json")
         self.assertEqual(filename("luxir", "TOP_10", {}), "luxir-TOP_10.json")
         self.assertEqual(server_env(parse_variant("heap=2g")), "SEARCHBENCH_HEAP=2g")
+        self.assertEqual(server_env(parse_variant("query_cache=on")),
+                         "SEARCHBENCH_QUERY_CACHE=on")
+        self.assertEqual(param_settings(parse_variant("query_cache=on")), {})
         with self.assertRaises(ValueError):
             parse_variant("concurrency=0")
         with self.assertRaises(ValueError):
@@ -472,7 +476,8 @@ class SearchbenchUnitTest(unittest.TestCase):
                                    ("SEARCHBENCH_HEAP=2g", ["heap=2g,concurrency=1"])])
 
     @staticmethod
-    def variant_cell(concurrency, qps, variant=None, facet_limit=10, heap="8g"):
+    def variant_cell(concurrency, qps, variant=None, facet_limit=10, heap="8g",
+                     query_cache="off"):
         return {
             "variant": variant or {},
             "task_parameters": {"shape": "top_docs", "limit": 10,
@@ -480,7 +485,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             "run_config": {"concurrency": concurrency, "replay_threads": 1,
                            "duration_per_repetition_s": 5, "repetitions": 2,
                            "replay_order": "seq", "replay_seed": None},
-            "engine_config": {"heap_max": heap},
+            "engine_config": {"heap_max": heap, "query_cache": query_cache},
             "aggregate": {"latency_ms": {"p50": 1.0, "p90": 1.5, "p99": 2.0},
                           "qps": qps, "errors": 0,
                           "server_cpu": {"cpu_ms_per_request": 0.5,
@@ -528,6 +533,41 @@ class SearchbenchUnitTest(unittest.TestCase):
                 self.variant_cell(8, 700, {"facet_limit": 100}, facet_limit=100),
         }
         self.assertEqual(undeclared_variation(declared), [])
+
+    def test_report_surfaces_undeclared_query_cache(self):
+        results = {
+            ("luxir", "AND_HIGH_HIGH_COUNT", "{}"): self.variant_cell(8, 2600),
+            ("elasticsearch", "AND_HIGH_HIGH_COUNT", "{}"):
+                self.variant_cell(8, 36000, query_cache="on"),
+        }
+        self.assertIn("`query_cache` varies without a declaring variant",
+                      "\n".join(undeclared_variation(results)))
+        declared = {
+            ("luxir", "AND_HIGH_HIGH_COUNT", "{}"): self.variant_cell(8, 2600),
+            ("luxir", "AND_HIGH_HIGH_COUNT", '{"query_cache": "on"}'):
+                self.variant_cell(8, 36000, {"query_cache": "on"}, query_cache="on"),
+        }
+        self.assertEqual(undeclared_variation(declared), [])
+
+    def test_observed_query_cache_reads_each_engines_report(self):
+        luxir_on = {"collections": [{"shards": [{"index": {"query_cache": {
+            "enabled": True, "max_bytes": 67108864}}}]}]}
+        luxir_off = {"collections": [{"shards": [{"index": {"query_cache": {}}}]}]}
+        with mock.patch("query_cache.request_json", return_value=luxir_on):
+            self.assertEqual(observed_query_cache("luxir", "h", 9400), "on")
+        with mock.patch("query_cache.request_json", return_value=luxir_off):
+            self.assertEqual(observed_query_cache("luxir", "h", 9400), "off")
+        with mock.patch("query_cache.request_json", return_value={"collections": []}):
+            self.assertIsNone(observed_query_cache("luxir", "h", 9400))
+        # An index without the setting serves the engine default (enabled).
+        with mock.patch("query_cache.request_json", return_value={}):
+            self.assertEqual(observed_query_cache("elasticsearch", "h", 9202), "on")
+        disabled = {"searchbench": {"settings": {"index": {"queries": {"cache": {
+            "enabled": "false"}}}}}}
+        with mock.patch("query_cache.request_json", return_value=disabled):
+            self.assertEqual(observed_query_cache("opensearch", "h", 9201), "off")
+        with mock.patch("query_cache.request_json", side_effect=ConnectionRefusedError):
+            self.assertIsNone(observed_query_cache("opensearch", "h", 9201))
 
     def test_report_flags_client_bound_cells(self):
         hot = self.variant_cell(16, 50000, {"concurrency": 16})
@@ -1311,8 +1351,9 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertEqual(binary_sha256, file_sha256(sys.executable))
 
         args = SimpleNamespace(host="127.0.0.1", port=9400, server_cores="0",
-                               server_pid=os.getpid())
+                               server_pid=os.getpid(), collection="searchbench")
         with mock.patch("driver.resolve_running_binary", return_value=None), \
+                mock.patch("driver.observed_query_cache", return_value="off"), \
                 mock.patch("driver.git_head", return_value="configured-head"), \
                 mock.patch("driver.git_dirty", return_value=False), \
                 mock.patch.dict(os.environ, {"LUXIR_BIN": sys.executable,
@@ -1320,6 +1361,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             config = server_config("luxir", {}, args)
         self.assertEqual(config["binary_provenance"], "env")
         self.assertEqual(config["version"], "configured-head")
+        self.assertEqual(config["query_cache"], "off")
         self.assertEqual(config["index_layout_version"], index_layout_version("luxir"))
         self.assertEqual(config["full_text"], {
             "field": "body", "tokenizer": "unicode_word", "filters": ["lowercase"],
@@ -1392,13 +1434,14 @@ class EngineInstallTest(unittest.TestCase):
 
     def test_rest_server_config_records_the_served_build(self):
         args = SimpleNamespace(host="127.0.0.1", port=9201, server_cores="0",
-                               server_pid=os.getpid())
+                               server_pid=os.getpid(), collection="searchbench")
         served = {"version": {"number": "3.10.0", "build_hash": self.BUILD["commit"],
                               "build_snapshot": False}}
         with tempfile.TemporaryDirectory() as temp_dir, \
                 mock.patch.dict(os.environ, {"OPENSEARCH_BUILD": "snapshot",
                                              "SEARCHBENCH_NUMERIC_POINTS": ""}), \
-                mock.patch("driver.request_json", return_value=served):
+                mock.patch("driver.request_json", return_value=served), \
+                mock.patch("driver.observed_query_cache", return_value="on"):
             root = self.make_root(temp_dir)
             with mock.patch("driver.engine_install",
                             lambda engine, versions: engine_install(
@@ -1411,6 +1454,7 @@ class EngineInstallTest(unittest.TestCase):
         self.assertEqual(config["build"], self.BUILD)
         self.assertEqual(config["served_version"]["build_hash"], self.BUILD["commit"])
         self.assertEqual(config["distribution"], "nightly bundle")
+        self.assertEqual(config["query_cache"], "on")
 
     def test_grid_cells_match_on_the_served_build(self):
         import grid

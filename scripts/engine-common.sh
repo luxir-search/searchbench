@@ -333,10 +333,16 @@ prepare_rest_config() {
 }
 
 ensure_running() {
-  local engine=$1 pidfile
+  local engine=$1 pidfile posture observed
   pidfile=$(engine_pidfile "$engine")
+  posture=$(query_cache_posture) || return 1
   if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-    return 0
+    # A server left running by another board may serve another cache posture.
+    observed=$(python3 "$ROOT/python/query_cache.py" "$engine" "$(engine_port "$engine")" \
+      "${DATASET_COLLECTION:-searchbench}")
+    [[ $observed == "$posture" ]] && return 0
+    echo "$engine is running with query cache $observed; restarting with $posture"
+    "$ROOT/scripts/stop-$(engine_process "$engine").sh" >/dev/null || return 1
   fi
   [[ ! -e "$pidfile" ]] || archive_existing "$pidfile"
   echo "starting $engine (left running; use scripts/stop-$engine.sh to stop)"
@@ -420,21 +426,30 @@ stop_pidfile() {
   archive_existing "$pidfile"
 }
 
-# Query-cache posture for REST engines. SEARCHBENCH_QUERY_CACHE=off|on flips
-# the Lucene query cache (index.queries.cache.enabled) on the served index; it
-# is a static index setting, so the index is closed around the update. A
-# missing index (fresh feed session) is skipped: the posture is applied by the
-# serving session's start, after the dataset exists. Luxir consumes the same
-# variable in start-luxir.sh (--query-cache-bytes=0).
-apply_rest_query_cache() {
-  local engine=$1 port=$2 collection=${DATASET_COLLECTION:-searchbench} enabled
-  # The setting persists in the index, so unset restores the engine default
-  # (enabled) rather than inheriting whatever the previous board left behind.
-  case "${SEARCHBENCH_QUERY_CACHE:-on}" in
-    off) enabled=false ;;
-    on) enabled=true ;;
+# Query/filter-cache posture: SEARCHBENCH_QUERY_CACHE=off|on, default off.
+# The luceneutil workloads repeat 7-50 distinct queries per class thousands of
+# times per window, so with a cache on, warmup promotes every result and the
+# cells measure cache hits rather than execution. Boards whose cache is the
+# fixture (grid.sh, run-cache-first-multisegment.sh) set it on. Prints the
+# posture; fails on any other value.
+query_cache_posture() {
+  case "${SEARCHBENCH_QUERY_CACHE:-off}" in
+    off|on) echo "${SEARCHBENCH_QUERY_CACHE:-off}" ;;
     *) echo "SEARCHBENCH_QUERY_CACHE must be 'off' or 'on'" >&2; return 1 ;;
   esac
+}
+
+# REST engines: the posture flips the Lucene query cache
+# (index.queries.cache.enabled) on the served index; it is a static index
+# setting, so the index is closed around the update. The setting persists in
+# the index, so every start applies the posture rather than inheriting
+# whatever the previous board left behind. A missing index (fresh feed session)
+# is skipped: the posture is applied by the serving session's start, after the
+# dataset exists. Luxir applies it in start-luxir.sh (--query-cache-bytes=0).
+apply_rest_query_cache() {
+  local engine=$1 port=$2 collection=${DATASET_COLLECTION:-searchbench} enabled posture
+  posture=$(query_cache_posture) || return 1
+  [[ $posture == on ]] && enabled=true || enabled=false
   local base="http://127.0.0.1:$port/$collection"
   if ! curl -sf "$base" > /dev/null 2>&1; then
     echo "$engine: no index $collection yet; query-cache posture deferred" >&2

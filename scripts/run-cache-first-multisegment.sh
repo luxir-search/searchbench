@@ -8,6 +8,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 PY="$ROOT/python"
 source "$ROOT/scripts/engine-common.sh"
+# The stable filter's cache entry is what this gate measures: keep the query
+# cache on unless the caller says otherwise (query_cache_posture defaults off).
+export SEARCHBENCH_QUERY_CACHE=${SEARCHBENCH_QUERY_CACHE:-on}
 
 TOPOLOGY=tiered-45
 CORPUS="$ROOT/corpus/corpus-10m-searchbench.ndjson"

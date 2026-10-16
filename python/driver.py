@@ -23,6 +23,7 @@ from http_sync import request_json
 from installs import check_served_version, engine_install
 from network_namespace import network_namespace
 from presets import PRESETS, TASKS, comparable_hash, param_hash, parse_override, resolve
+from query_cache import observed_query_cache
 from query_source import QueryItem, read_id_batches, searchbench_queries
 from request_capture import capture_request, capture_response
 from results_io import write_context
@@ -543,6 +544,8 @@ def server_config(engine, versions, args):
         common["nofile_soft"] = None
         common["nofile_hard"] = None
     common["startup"] = process_startup_config(engine, args.server_pid)
+    # The engine's own account, not the requested posture (query_cache.py).
+    common["query_cache"] = observed_query_cache(engine, args.host, args.port, args.collection)
     if engine != "luxir":
         # Observed heap, not asserted: the last -Xms/-Xmx on the live JVM's
         # command line wins, which is also how jvm.options.d overlays land.
