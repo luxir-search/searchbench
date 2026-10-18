@@ -553,8 +553,9 @@ class SearchbenchUnitTest(unittest.TestCase):
         luxir_on = {"collections": [{"shards": [{"index": {"query_cache": {
             "enabled": True, "max_bytes": 67108864}}}]}]}
         luxir_off = {"collections": [{"shards": [{"index": {"query_cache": {}}}]}]}
-        with mock.patch("query_cache.request_json", return_value=luxir_on):
+        with mock.patch("query_cache.request_json", return_value=luxir_on) as request:
             self.assertEqual(observed_query_cache("luxir", "h", 9400), "on")
+        self.assertEqual(request.call_args.args[3], "/_stats?collections=true")
         with mock.patch("query_cache.request_json", return_value=luxir_off):
             self.assertEqual(observed_query_cache("luxir", "h", 9400), "off")
         with mock.patch("query_cache.request_json", return_value={"collections": []}):

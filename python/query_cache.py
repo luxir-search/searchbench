@@ -16,7 +16,9 @@ def observed_query_cache(engine, host, port, collection="searchbench"):
     try:
         if engine == "luxir":
             # A disabled cache (--query-cache-bytes=0) reports an empty object.
-            stats = request_json(host, port, "GET", "/_stats", timeout=30)
+            # Node stats walk collections only on request; older builds
+            # ignore the parameter and always walk them.
+            stats = request_json(host, port, "GET", "/_stats?collections=true", timeout=30)
             states = {bool(shard["index"]["query_cache"].get("enabled"))
                       for coll in stats.get("collections", [])
                       for shard in coll.get("shards", [])
