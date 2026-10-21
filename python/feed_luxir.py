@@ -221,7 +221,7 @@ def main():
         raise RuntimeError(f"Luxir update returned errors: {bad[:3]}")
     count = request_json(args.host, args.port, "POST",
                          f"/collections/{args.collection}/_search",
-                         {"query": {"all": True}, "limit": 0, "get_number": True})
+                         {"query": {"all": True}, "limit": 0, "count_limit": -1})
     found = count.get("found") if isinstance(count, dict) else None
     print(json.dumps({"responses": lines, "count_response": count,
                       "streams": args.streams,

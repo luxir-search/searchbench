@@ -353,7 +353,7 @@ served_count() {
   local engine=$1 port=$2 collection=${3:-searchbench}
   if [[ "$engine" == luxir ]]; then
     curl -s -X POST "localhost:$port/collections/$collection/_search" \
-      -d '{"query":{"all":true},"limit":0,"get_number":true}' \
+      -d '{"query":{"all":true},"limit":0,"count_limit":-1}' \
       | python3 -c 'import json,sys; print(json.load(sys.stdin).get("found",-1))'
   else
     curl -s "localhost:$port/$collection/_count" \

@@ -8,7 +8,7 @@ records the exact resolved identity in every result file as a sanity check;
 report tooling pivots on declared differences and surfaces undeclared ones
 from the recorded values rather than refusing to tabulate.
 
-count_mode is a parameter like any other: "exact" (Luxir get_number:true /
+count_mode is a parameter like any other: "exact" (Luxir count_limit:-1 /
 REST track_total_hits:true) or "skip" (both engines' shipping default).
 The historical name for it was "lane"; the driver's --lane flag still sets
 it and result files still record it as "lane" for continuity.

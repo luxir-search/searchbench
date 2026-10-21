@@ -649,7 +649,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             if limit:
                 expected["fields"] = ["id"]
             else:
-                expected["get_number"] = True
+                expected["count_limit"] = -1
             self.assertEqual((request.method, request.path),
                              ("POST", "/collections/searchbench/_search"))
             self.assertEqual(json.loads(request.body), expected)
@@ -830,8 +830,8 @@ class SearchbenchUnitTest(unittest.TestCase):
             exact = json.loads(adapter.build(resolve("COUNT", "exact"), self.union).body)
             skip = json.loads(adapter.build(resolve("COUNT", "skip"), self.union).body)
             if engine == "luxir":
-                self.assertTrue(exact["get_number"])
-                self.assertNotIn("get_number", skip)
+                self.assertEqual(exact["count_limit"], -1)
+                self.assertNotIn("count_limit", skip)
             else:
                 self.assertTrue(exact["track_total_hits"])
                 self.assertNotIn("track_total_hits", skip)
@@ -841,7 +841,7 @@ class SearchbenchUnitTest(unittest.TestCase):
             body = json.loads(make_adapter(engine, "searchbench").build(
                 resolve("TOP_10", "exact"), self.union).body)
             if engine == "luxir":
-                self.assertNotIn("get_number", body)
+                self.assertNotIn("count_limit", body)
             else:
                 self.assertIs(body["track_total_hits"], False)
 

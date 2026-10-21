@@ -325,7 +325,7 @@ class LuxirAdapter(BaseAdapter):
         return super().fail_rules(shape)
 
     def build_field_probe(self, field):
-        top = {"query": {"all": True}, "limit": 0, "get_number": True,
+        top = {"query": {"all": True}, "limit": 0, "count_limit": -1,
                "ops": {"facet": {"field_facet": {"field": field, "limit": 1}}}}
         return self.encode("POST", f"/collections/{self.collection}/_search",
                            top, "field-probe", "*:*")
@@ -414,7 +414,7 @@ class LuxirAdapter(BaseAdapter):
         if params.get("fields"):
             top["fields"] = params["fields"]
         if wants_total(params) and params["count_mode"] == "exact":
-            top["get_number"] = True
+            top["count_limit"] = -1
         if params.get("sort_field"):
             top["sort"] = [{"expr": params["sort_field"],
                              "dir": params.get("sort_dir", "asc").lower()}]

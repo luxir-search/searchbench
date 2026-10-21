@@ -485,7 +485,7 @@ tasks explicitly do not request a total match count: COUNT owns that operation,
 and combining it with top-K disables pruning differently across engines.
 
 Count tasks return no documents. In the `exact` lane, Luxir sets
-`get_number:true` and the REST engines set `track_total_hits:true`. The REST
+`count_limit:-1` and the REST engines set `track_total_hits:true`. The REST
 shard request cache is explicitly disabled for every benchmark search shape,
 including top-N, count, facet, and GET. This prevents a repeated request from
 returning a cached whole response. The query/filter cache is off as well (see
