@@ -37,7 +37,8 @@ from query_source import (BENCHMARK_GAME_QUERY_CLASSES, DERIVED_QUERY_CLASSES,
 from results_io import load_result, write_context
 from sampler import AllocatorSampler
 from request_capture import capture_response
-from report import (client_saturation, fmt, fmt_memory_mib, index_shape_lines,
+from report import (agreement, client_saturation, flat_query_lines, fmt,
+                    fmt_memory_mib, index_shape_lines,
                     ordered_tasks, ordered_variants, pivot_query_lines,
                     representative_request_lines, startup_lines,
                     undeclared_variation)
@@ -513,6 +514,23 @@ class SearchbenchUnitTest(unittest.TestCase):
         self.assertIn("c16 cores busy", text)
         self.assertFalse(failures)
         self.assertEqual(undeclared_variation(results), [])
+
+    def test_report_agreement_covers_the_engines_a_board_ran(self):
+        # A two-engine board is compared across its two engines; the engine
+        # it never ran is neither a mismatch source nor a missing row.
+        results = {
+            ("luxir", "HIGH_TERM_COUNT", "{}"):
+                dict(self.variant_cell(8, 1000), count_samples={"a": 3, "b": 5}),
+            ("elasticsearch", "HIGH_TERM_COUNT", "{}"):
+                dict(self.variant_cell(8, 900), count_samples={"a": 3, "b": 6}),
+        }
+        self.assertEqual(agreement(results, "HIGH_TERM_COUNT", "{}"), (2, ["b"]))
+        failures = defaultdict(set)
+        text = "\n".join(flat_query_lines(results, ["HIGH_TERM_COUNT"], "{}", failures))
+        self.assertNotIn("opensearch", text)
+        self.assertFalse(failures)
+        lone = {key: value for key, value in results.items() if key[0] == "luxir"}
+        self.assertEqual(agreement(lone, "HIGH_TERM_COUNT", "{}"), (0, None))
 
     def test_report_surfaces_undeclared_variation(self):
         # Same cells, but nothing declares the concurrency difference, the

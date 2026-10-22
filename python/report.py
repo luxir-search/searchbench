@@ -99,10 +99,17 @@ def ordered_variants(results):
     return sorted({vkey for (_engine, _task, vkey) in results}, key=variant_order_key)
 
 
+def board_engines(results):
+    """The engines this board ran, in canonical order. A board need not run
+    every engine; one it never ran is absent, not missing."""
+    present = {engine for engine, _task, _vkey in results}
+    return tuple(engine for engine in ENGINES if engine in present)
+
+
 def agreement(results, task, vkey):
     samples = [results.get((engine, task, vkey), {}).get("count_samples", {})
-               for engine in ENGINES]
-    if any(not sample for sample in samples):
+               for engine in board_engines(results)]
+    if len(samples) < 2 or any(not sample for sample in samples):
         return 0, None
     common = set(samples[0])
     for sample in samples[1:]:
@@ -513,7 +520,7 @@ def flat_query_lines(results, observed, vkey, failures):
         "Peak total RSS MiB | Peak anon RSS MiB | Status |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]
     for task in observed:
-        for engine in ENGINES:
+        for engine in board_engines(results):
             result = results.get((engine, task, vkey))
             if not result or "aggregate" not in result:
                 status = result.get("failure", "missing") if result else "missing"
@@ -624,7 +631,7 @@ def main():
 
     lines = [f"# {args.title}", "",
              "The same corpus, resolved task parameters, replay driver, and HTTP transport "
-             "are used for Luxir, OpenSearch, and Elasticsearch.", ""]
+             "are used for every engine on the board.", ""]
     lines += corpus_lines(results)
     if any(engine == "luxir" for engine, _task, _variant in results):
         lines += [""] + health_control_lines(args.directory, queries=list(results.values()))
@@ -651,7 +658,7 @@ def main():
     lines += [""] + representative_request_lines(results, observed)
 
     lines += ["", "## Exact-count agreement", "",
-              "Agreement compares every query key returned by all three engines. "
+              "Agreement compares every query key returned by every engine on the board. "
               "Normal baselines use the canonical exact-agreement set; query-selection "
               "campaigns intentionally run the unfiltered source and report its "
               "mismatches.", "",
