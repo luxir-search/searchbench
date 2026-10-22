@@ -95,7 +95,7 @@ source commit and download, checked against the version and commit the
 running server reports.
 
 The current reference run uses OpenSearch 3.8.0 (Lucene 10.5.0) from its
-Apache-2.0 official Linux x64 distribution and Elasticsearch 9.5.4 (Lucene
+Apache-2.0 official Linux x64 distribution and Elasticsearch 9.5.5 (Lucene
 10.5.1) from its Elastic License 2.0 official Linux x86_64 distribution, both
 with their bundled JDK. The Luxir arm uses the locally built release binary
 and records its SHA-256 and repository state. Elastic License 2.0 contains

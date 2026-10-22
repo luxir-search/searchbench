@@ -1,8 +1,8 @@
 {
-  "verified_at_utc": "2026-09-15T18:58:20Z",
+  "verified_at_utc": "2026-10-22T21:54:32Z",
   "verification_sources": {
     "opensearch": "https://github.com/opensearch-project/OpenSearch/releases/tag/3.8.0",
-    "elasticsearch": "https://github.com/elastic/elasticsearch/releases/tag/v9.5.4"
+    "elasticsearch": "https://github.com/elastic/elasticsearch/releases/tag/v9.5.5"
   },
   "opensearch": {
     "version": "3.8.0",
@@ -24,11 +24,11 @@
     }
   },
   "elasticsearch": {
-    "version": "9.5.4",
+    "version": "9.5.5",
     "distribution": "official default Linux x86_64 tarball with bundled JDK",
     "license": "Elastic License 2.0 distribution; free source is also available under AGPLv3",
-    "url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz",
-    "checksum_url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.4-linux-x86_64.tar.gz.sha512",
+    "url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.5-linux-x86_64.tar.gz",
+    "checksum_url": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.5.5-linux-x86_64.tar.gz.sha512",
     "verification": "published SHA-512 sidecar, checked by download.sh",
     "snapshot": {
       "version": "9.6.0-SNAPSHOT",
