@@ -22,6 +22,8 @@ def index_layout_version(engine):
 
 ID_FIELD = "id"
 BODY_FIELD = "body"
+# Projectable fields with no REST doc values: a hit returns them from _source.
+TEXT_FIELDS = frozenset({BODY_FIELD})
 LUXIR_ANALYZER = {"tokenizer": "unicode_word", "filters": ["lowercase"]}
 REST_ANALYZER = {"analyzer": "standard", "search_analyzer": "standard"}
 

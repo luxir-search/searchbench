@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import json
 import math
 
-from schema import BODY_FIELD, ID_FIELD
+from schema import BODY_FIELD, ID_FIELD, TEXT_FIELDS
 
 # Returned by a bucket-metric accessor when the engine did not emit the key at
 # all, which is a failure; a null VALUE is legal (see check_bucket_metrics).
@@ -40,6 +40,13 @@ def topology_summary(segments, shard_count, active_merges=None):
     if active_merges is not None:
         result["active_merges"] = active_merges
     return result
+
+
+def split_projection(fields):
+    """Projected fields as (doc-value scalars, text fields read from _source)."""
+    fields = fields or ()
+    return ([field for field in fields if field not in TEXT_FIELDS],
+            [field for field in fields if field in TEXT_FIELDS])
 
 
 def expr_quote(text):
@@ -552,6 +559,10 @@ class LuxirAdapter(BaseAdapter):
                 raise RuntimeError(f"{name}: missing docs")
             if found and not docs:
                 raise RuntimeError(f"{name}: empty docs with found={found}")
+            missing = sorted({field for doc in docs for field in params.get("fields") or ()
+                              if field not in doc})
+            if missing:
+                raise RuntimeError(f"{name}: docs are missing projected fields {missing}")
         for facet in self.expected_facets(params):
             result = ops.get(facet)
             if not isinstance(result, dict) or not isinstance(result.get("buckets"), list):
@@ -722,16 +733,19 @@ class RestAdapter(BaseAdapter):
             body["track_total_hits"] = False
         elif params["count_mode"] == "exact":
             body["track_total_hits"] = True
-        # Scalar projections come from doc values. _source stays off so hit
-        # retrieval never decompresses the stored source blob, and stored
-        # fields are disabled outright: otherwise the fetch phase still reads
-        # the generated _id from stored fields for every hit. Count requests
-        # return no hits and have no fetch phase to disable.
-        body.update(size=params["limit"], _source=False)
-        if params["limit"]:
+        # Scalar projections come from doc values. _source stays off unless a
+        # text field is projected (text has no doc values), so hit retrieval
+        # otherwise never decompresses the stored source blob, and stored
+        # fields are then disabled outright: otherwise the fetch phase still
+        # reads the generated _id from stored fields for every hit (the REST
+        # engines refuse stored_fields:_none_ beside a requested _source).
+        # Count requests return no hits and have no fetch phase to disable.
+        scalars, texts = split_projection(params.get("fields"))
+        body.update(size=params["limit"], _source={"includes": texts} if texts else False)
+        if params["limit"] and not texts:
             body["stored_fields"] = "_none_"
-        if params.get("fields"):
-            body["docvalue_fields"] = params["fields"]
+        if scalars:
+            body["docvalue_fields"] = scalars
         if params.get("sort_field"):
             body["sort"] = [{params["sort_field"]: params.get("sort_dir", "asc")}]
         shape = params["shape"]
@@ -794,16 +808,24 @@ class RestAdapter(BaseAdapter):
 
     @staticmethod
     def projected_doc(hit, fields, name):
-        values = hit.get("fields")
+        scalars, texts = split_projection(fields)
+        values = hit.get("fields") if scalars else {}
         if not isinstance(values, dict):
             raise RuntimeError(f"{name}: hit has no doc-value fields")
+        source = hit.get("_source") if texts else {}
+        if not isinstance(source, dict):
+            raise RuntimeError(f"{name}: hit has no _source")
         result = {}
-        for field in fields:
+        for field in scalars:
             value = values.get(field)
             if not isinstance(value, list) or len(value) != 1:
                 raise RuntimeError(
                     f"{name}: projected scalar field {field!r} did not return one value")
             result[field] = value[0]
+        for field in texts:
+            if not isinstance(source.get(field), str):
+                raise RuntimeError(f"{name}: projected text field {field!r} did not return text")
+            result[field] = source[field]
         return result
 
     @staticmethod

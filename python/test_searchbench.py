@@ -917,6 +917,26 @@ class SearchbenchUnitTest(unittest.TestCase):
         top_request = json.loads(rest.build(resolve("TOP_10", "skip"), self.union).body)
         self.assertEqual(top_request["docvalue_fields"], ["id"])
         self.assertEqual(top_request["stored_fields"], "_none_")
+
+        # Text has no doc values: body comes from _source, which the REST
+        # engines refuse beside stored_fields:_none_.
+        with_body = resolve("TOP_10_BODY", "skip")
+        body_request = json.loads(rest.build(with_body, self.union).body)
+        self.assertEqual(body_request["docvalue_fields"], ["id"])
+        self.assertEqual(body_request["_source"], {"includes": ["body"]})
+        self.assertNotIn("stored_fields", body_request)
+        hit = {"fields": {"id": ["7"]}, "_source": {"body": "text"}}
+        self.assertIsNone(rest.validate(
+            with_body, json.dumps({"hits": {"hits": [hit]}}).encode(), self.union))
+        with self.assertRaises(RuntimeError):
+            rest.validate(with_body, json.dumps(
+                {"hits": {"hits": [{"fields": {"id": ["7"]}}]}}).encode(), self.union)
+        self.assertEqual(json.loads(luxir.build(with_body, self.union).body)["fields"],
+                         ["id", "body"])
+        self.assertIsNone(luxir.validate(
+            with_body, json.dumps({"docs": [{"id": "7", "body": "text"}]}).encode(), self.union))
+        with self.assertRaises(RuntimeError):
+            luxir.validate(with_body, json.dumps({"docs": [{"id": "7"}]}).encode(), self.union)
         count_request = json.loads(
             rest.build(resolve("HIGH_TERM_COUNT", "exact"), self.union).body)
         self.assertNotIn("stored_fields", count_request)

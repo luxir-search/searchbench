@@ -51,6 +51,13 @@ PRESETS = {
                "total_hits": False},
     "TOP_100": {"shape": "top_docs", "limit": 100, "fields": ["id"],
                 "total_hits": False},
+    # Hits with their text, the way a search agent reads results: logged
+    # agent requests mostly ask for 5 or 10. The REST engines return body
+    # from _source (text has no doc values); Luxir from its stored field.
+    "TOP_5_BODY": {"shape": "top_docs", "limit": 5, "fields": ["id", "body"],
+                   "total_hits": False},
+    "TOP_10_BODY": {"shape": "top_docs", "limit": 10, "fields": ["id", "body"],
+                    "total_hits": False},
     "COUNT": {"shape": "top_docs", "limit": 0, "fields": None},
     "FACET_10": {"shape": "facet", "limit": 10, "fields": ["id"],
                  "facet_field": "cat_s", "facet_limit": 10},
