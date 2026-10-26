@@ -418,6 +418,25 @@ requests do not revisit a whole-query key while the same filter-clause key is
 continually reused. The campaign also runs ordinary HIGH_TERM,
 AND_HIGH_MED, and HIGH_SLOPPY_PHRASE COUNT controls on the identical topology.
 
+The range-planning family adds five more opt-in cells. They use the same
+`and_high_med` pool and nonce wrapping, and the `filters` parameter, which
+sends several FILTER clauses in order:
+
+- `FILTERED_RANGE_1MID_AND_HIGH_MED_TOP_10` and `_COUNT`: `price_i`
+  `[49500,50500)`, an interior 1% range.
+- `FILTERED_RANGES_90_1MID_AND_HIGH_MED_COUNT` and
+  `FILTERED_RANGES_1MID_90_AND_HIGH_MED_COUNT`: `sort_i` `[0,0.9*2^32)` beside
+  the interior `price_i` range, in both clause orders.
+- `FILTERED_RANGES_90_001MID_AND_HIGH_MED_COUNT`: the broad `sort_i` range
+  before `price_i` `[50000,50010)`, about 0.01%.
+
+`price_i` is hash-uniform and `sort_i` is a permuted ordinal, so neither has
+settled zones at any block. An interior range therefore tests every value
+against both bounds. Each paired cell gives the two ranges similar estimated
+costs, so its verification order depends on how the engine judges
+selectivity, not on the request's clause order. The two clause orders of a
+pair must return identical counts, and differ in time only through planning.
+
 `queries/luceneutil/queries-all.txt` contains a deterministic 940-query
 extraction: the first 50 source queries per class, except the two high phrase
 classes, which contain only 36 each upstream, plus the derived scan classes

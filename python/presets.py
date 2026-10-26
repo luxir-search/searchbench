@@ -191,6 +191,34 @@ for density, upper in (("90", 90_000), ("1", 1_000)):
         STABLE_FILTER_TASKS.append(name)
 STABLE_FILTER_TASKS = tuple(STABLE_FILTER_TASKS)
 
+# Range-planning cells, opt-in, with the stable family's nonce posture. Both
+# fields are unsettled at every block (price_i is hash-uniform, sort_i a
+# permuted ordinal over 2^32), so an interior range has no settled zones and
+# two ranges carry similar estimated costs. The 1MID cells take a range from
+# the middle of price_i. The paired cells put a broad sort_i range beside a
+# selective price_i range in both clause orders, so the filters' verification
+# order must come from their selectivity, not from the request.
+SORT_I_90 = (1 << 32) * 9 // 10
+PRICE_1_MID = {"field": "price_i", "kind": "numeric_range", "gte": 49_500, "lt": 50_500}
+PRICE_001_MID = {"field": "price_i", "kind": "numeric_range", "gte": 50_000, "lt": 50_010}
+SORT_90 = {"field": "sort_i", "kind": "numeric_range", "gte": 0, "lt": SORT_I_90}
+RANGE_PLANNING_TASKS = []
+for name, base, filters in (
+        ("FILTERED_RANGE_1MID_AND_HIGH_MED_TOP_10", "TOP_10", (PRICE_1_MID,)),
+        ("FILTERED_RANGE_1MID_AND_HIGH_MED_COUNT", "COUNT", (PRICE_1_MID,)),
+        ("FILTERED_RANGES_90_1MID_AND_HIGH_MED_COUNT", "COUNT", (SORT_90, PRICE_1_MID)),
+        ("FILTERED_RANGES_1MID_90_AND_HIGH_MED_COUNT", "COUNT", (PRICE_1_MID, SORT_90)),
+        ("FILTERED_RANGES_90_001MID_AND_HIGH_MED_COUNT", "COUNT", (SORT_90, PRICE_001_MID))):
+    PRESETS[name] = dict(
+        PRESETS[base],
+        query_class="and_high_med",
+        query_variants=200_000,
+        filter_mode="boolean",
+        filters=filters,
+    )
+    RANGE_PLANNING_TASKS.append(name)
+RANGE_PLANNING_TASKS = tuple(RANGE_PLANNING_TASKS)
+
 # Controls use the same validation/replay path, but are not search workloads
 # or cross-engine cells. Luxir's health endpoint does no index work.
 CONTROL_PRESETS = {"HEALTH": {"shape": "health"}}

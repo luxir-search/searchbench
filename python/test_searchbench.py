@@ -27,8 +27,8 @@ from installs import (PROVENANCE_FILE, check_served_version, engine_install,
 from import_luceneutil_queries import (REGEX_TASKS, escape_pattern, escape_term,
                                        expression)
 from presets import (BENCHMARK_GAME_TASKS, FULL_TEXT_TASKS, GRIDS, METRIC1,
-                     PRESETS, STABLE_FILTER_TASKS, comparable_hash, param_hash, resolve,
-                     resolve_grid_cell)
+                     PRESETS, RANGE_PLANNING_TASKS, STABLE_FILTER_TASKS, comparable_hash,
+                     param_hash, resolve, resolve_grid_cell)
 from query_cache import observed_query_cache
 from query_source import (BENCHMARK_GAME_QUERY_CLASSES, DERIVED_QUERY_CLASSES,
                           LUCENEUTIL_CLASS_MAP, PRIMARY_QUERY_CLASSES,
@@ -164,6 +164,41 @@ class SearchbenchUnitTest(unittest.TestCase):
             self.assertIs(rest["track_total_hits"], False)
         self.assertTrue(all(resolve(task, "exact")["query_variants"] == 200_000
                             for task in STABLE_FILTER_TASKS))
+
+    def test_range_planning_tasks_send_every_filter_in_order(self):
+        self.assertEqual(RANGE_PLANNING_TASKS, (
+            "FILTERED_RANGE_1MID_AND_HIGH_MED_TOP_10",
+            "FILTERED_RANGE_1MID_AND_HIGH_MED_COUNT",
+            "FILTERED_RANGES_90_1MID_AND_HIGH_MED_COUNT",
+            "FILTERED_RANGES_1MID_90_AND_HIGH_MED_COUNT",
+            "FILTERED_RANGES_90_001MID_AND_HIGH_MED_COUNT",
+        ))
+        source = QueryItem("+alpha +beta", "and_high_med", (), "test")
+        pools = {"top": [source], "count": [source]}
+        sort_90 = (1 << 32) * 9 // 10
+        for task, ranges in (
+                ("FILTERED_RANGES_90_1MID_AND_HIGH_MED_COUNT",
+                 [("sort_i", 0, sort_90), ("price_i", 49_500, 50_500)]),
+                ("FILTERED_RANGES_1MID_90_AND_HIGH_MED_COUNT",
+                 [("price_i", 49_500, 50_500), ("sort_i", 0, sort_90)])):
+            params = resolve(task, "exact", {"query_variants": 2})
+            workload = make_workload(task, params, pools, 0,
+                                     make_adapter("luxir", "searchbench"))
+            luxir = json.loads(make_adapter("luxir", "searchbench")
+                               .build(*workload[0]).body)
+            self.assertEqual(luxir["query"]["boolean"]["filter"], [
+                {"range": {"field": field, "gte": gte, "lt": lt}}
+                for field, gte, lt in ranges])
+            for engine in ("elasticsearch", "opensearch"):
+                rest = json.loads(make_adapter(engine, "searchbench")
+                                  .build(*workload[0]).body)
+                self.assertEqual(rest["query"]["bool"]["filter"], [
+                    {"range": {field: {"gte": gte, "lt": lt}}}
+                    for field, gte, lt in ranges])
+        with self.assertRaises(ValueError):
+            make_adapter("luxir", "searchbench").build(
+                dict(resolve(RANGE_PLANNING_TASKS[2], "exact"), filter_mode="query",
+                     match_all=True), source)
 
     def test_query_source_preserves_tags_and_filters_workload(self):
         rows = [

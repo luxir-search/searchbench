@@ -128,6 +128,18 @@ def rest_filter_clause(params):
     raise ValueError(f"unknown filter_kind {kind!r}")
 
 
+def filter_specs(params):
+    """Each filter clause's parameters, in request order.
+
+    `filters` lists several, each spelled like the single-filter parameters
+    without their `filter_` prefix; otherwise the filter_* keys describe one.
+    """
+    if params.get("filters"):
+        return [{f"filter_{key}": value for key, value in spec.items()}
+                for spec in params["filters"]]
+    return [params] if params.get("filter_field") else []
+
+
 def wants_total(params):
     """Does this request ask the engine for the total match count at all?
 
@@ -400,22 +412,24 @@ class LuxirAdapter(BaseAdapter):
             return self.build_get(params, item)
         top = {"query": {"all": True} if params.get("match_all") else luxir_query_clause(item),
                "limit": params["limit"]}
-        if params.get("filter_field"):
-            fq = luxir_filter_clause(params)
+        fqs = [luxir_filter_clause(spec) for spec in filter_specs(params)]
+        if fqs:
             filter_mode = params.get("filter_mode", "top_docs")
             if filter_mode == "boolean":
                 # Rewrite: filter as a non-scoring BooleanQuery clause instead
                 # of a TopDocs domain filter (execution-strategy A/B).
-                top["query"] = {"boolean": {"filter": [fq], "required": [top["query"]]}}
+                top["query"] = {"boolean": {"filter": fqs, "required": [top["query"]]}}
             elif filter_mode == "query":
                 if not params.get("match_all"):
                     raise ValueError("filter_mode=query requires match_all=true")
+                if len(fqs) != 1:
+                    raise ValueError("filter_mode=query takes exactly one filter")
                 # The selected docs are the main query rather than a TopDocs
                 # filter. This is semantically equivalent only when the query
                 # it replaces is match-all.
-                top["query"] = fq
+                top["query"] = fqs[0]
             elif filter_mode == "top_docs":
-                top["filter"] = [fq]
+                top["filter"] = fqs
             else:
                 raise ValueError(f"unknown luxir filter_mode {filter_mode!r}")
         if params.get("fields"):
@@ -712,18 +726,20 @@ class RestAdapter(BaseAdapter):
             return self.build_get(params, item)
         body = {"query": {"match_all": {}} if params.get("match_all")
                 else rest_query_clause(item)}
-        if params.get("filter_field"):
-            predicate = rest_filter_clause(params)
+        predicates = [rest_filter_clause(spec) for spec in filter_specs(params)]
+        if predicates:
             filter_mode = params.get("filter_mode", "top_docs")
             if filter_mode == "query":
                 if not params.get("match_all"):
                     raise ValueError("filter_mode=query requires match_all=true")
+                if len(predicates) != 1:
+                    raise ValueError("filter_mode=query takes exactly one filter")
                 # Query context, uncached. constant_score or bool.filter would
                 # reintroduce the cached-domain posture this mode avoids.
-                body["query"] = predicate
+                body["query"] = predicates[0]
             elif filter_mode in ("top_docs", "boolean"):
                 body["query"] = {"bool": {"must": [body["query"]],
-                                          "filter": [predicate]}}
+                                          "filter": predicates}}
             else:
                 raise ValueError(f"unknown REST filter_mode {filter_mode!r}")
         if not wants_total(params):
