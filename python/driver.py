@@ -182,7 +182,9 @@ def materialize_workload(workload, adapter, host, port, blob_path):
 
     representative_requests = {}
     with open(blob_path, "wb") as destination:
-        destination.write(struct.pack("<4sIIH", b"SBWL", 1, len(workload), len(labels)))
+        destination.write(struct.pack("<4sIIH", b"SBWL",
+                                      2 if hasattr(adapter, "expected_response") else 1,
+                                      len(workload), len(labels)))
         for label in labels:
             encoded = label.encode("utf-8")
             destination.write(struct.pack("<H", len(encoded)))
@@ -197,6 +199,10 @@ def materialize_workload(workload, adapter, host, port, blob_path):
                     request, wire, entry)
             destination.write(struct.pack("<IH", len(wire), bucket_ids[entry["name"]]))
             destination.write(wire)
+            if hasattr(adapter, "expected_response"):
+                expected = adapter.expected_response(entry, item)
+                destination.write(struct.pack("<I", len(expected)))
+                destination.write(expected)
     return str(blob_path), labels, representative_requests
 
 

@@ -925,3 +925,24 @@ def make_adapter(engine, collection):
     if engine in ("opensearch", "elasticsearch"):
         return RestAdapter(collection, engine)
     raise ValueError(f"unknown engine {engine!r}")
+
+
+class LuxirVectorAdapter:
+    def __init__(self, base):
+        self.base = base
+
+    def build(self, entry, body):
+        return self.base.encode('POST', f'/collections/{self.base.collection}/_search',
+                                body, entry['name'], '')
+
+    def expected_response(self, entry, body):
+        return entry["expected"].encode()
+
+    def wire_bytes(self, *args):
+        return self.base.wire_bytes(*args)
+
+    def replay_args(self):
+        return self.base.replay_args()
+
+    def fail_rules(self, shape):
+        return self.base.fail_rules(shape) + (('absent', b'"docs":['),)

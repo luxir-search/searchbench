@@ -355,6 +355,9 @@ also ignored local artifacts.
 
 ## Benchmark definitions
 
+- [`docs/vector-benchmark.md`](docs/vector-benchmark.md) defines the Luxir
+  Cohere vector feed, one-segment kNN, recall, and binary A/B workload.
+
 The README describes how to operate the repository. The settings and rationale
 for a competitive run live with that benchmark definition:
 

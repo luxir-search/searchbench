@@ -15,3 +15,8 @@ target_link_libraries(
     llhttp::llhttp_static
     $<IF:$<TARGET_EXISTS:hdr_histogram::hdr_histogram>,hdr_histogram::hdr_histogram,hdr_histogram::hdr_histogram_static>
     Threads::Threads)
+
+add_executable(vector_tool vector_tool.cpp)
+target_compile_features(vector_tool PRIVATE cxx_std_20)
+target_compile_options(vector_tool PRIVATE -O3 -Wall -Wextra -Wpedantic)
+target_link_libraries(vector_tool PRIVATE Threads::Threads)

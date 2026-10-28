@@ -92,6 +92,7 @@ struct Record {
   const std::uint8_t* ptr;
   std::uint32_t len;
   std::uint16_t bucket;
+  std::string_view expected;
 };
 
 class Workload {
@@ -100,6 +101,7 @@ class Workload {
   std::size_t size_ = 0;
   std::vector<std::string> labels_;
   std::vector<Record> records_;
+  bool has_expected_ = false;
 
  public:
   explicit Workload(const std::string& path) {
@@ -137,6 +139,7 @@ class Workload {
 
   const std::vector<std::string>& labels() const { return labels_; }
   const std::vector<Record>& records() const { return records_; }
+  bool has_expected() const { return has_expected_; }
 
  private:
   template <typename T>
@@ -167,9 +170,10 @@ class Workload {
     std::uint32_t version = read<std::uint32_t>(cursor, end);
     std::uint32_t record_count = read<std::uint32_t>(cursor, end);
     std::uint16_t bucket_count = read<std::uint16_t>(cursor, end);
-    if (version != 1) {
+    if (version != 1 && version != 2) {
       throw std::runtime_error("unsupported workload version " + std::to_string(version));
     }
+    has_expected_ = version == 2;
     if (record_count == 0 || bucket_count == 0) {
       throw std::runtime_error("workload must contain records and buckets");
     }
@@ -192,8 +196,17 @@ class Workload {
       if ((std::size_t)(end - cursor) < length) {
         throw std::runtime_error("truncated workload request");
       }
-      records_.push_back(Record{cursor, length, bucket});
+      const auto* request = cursor;
       cursor += length;
+      std::string_view expected;
+      if (version == 2) {
+        auto expected_length = read<std::uint32_t>(cursor, end);
+        if ((std::size_t)(end - cursor) < expected_length)
+          throw std::runtime_error("truncated expected response");
+        expected = std::string_view((const char*)cursor, expected_length);
+        cursor += expected_length;
+      }
+      records_.push_back(Record{request, length, bucket, expected});
     }
     if (cursor != end) {
       throw std::runtime_error("workload has trailing bytes");
@@ -503,7 +516,7 @@ class EventLoop {
   }
 
   std::unique_ptr<Protocol> make_protocol() const {
-    return std::make_unique<HttpProtocol>(!config_.fail_rules.empty());
+    return std::make_unique<HttpProtocol>(!config_.fail_rules.empty() || workload_.has_expected());
   }
 
   ~EventLoop() {
@@ -788,6 +801,23 @@ class EventLoop {
           failed = true;
           break;
         }
+      }
+    }
+    if (!failed && !connection.record->expected.empty()) {
+      // v2 records require their prevalidated docs payload in every response.
+      // Ignore JSON whitespace outside strings, retaining all string bytes.
+      std::string compact;
+      bool quoted = false, escaped = false;
+      for (auto byte : connection.protocol->body()) {
+        char c = (char)byte;
+        if (quoted || (c != ' ' && c != '\n' && c != '\r' && c != '\t')) compact += c;
+        if (escaped) escaped = false;
+        else if (quoted && c == '\\') escaped = true;
+        else if (c == '"') quoted = !quoted;
+      }
+      if (compact.find(connection.record->expected) == std::string::npos) {
+        record_error(connection, "payload", status, "response differs from prevalidated docs");
+        failed = true;
       }
     }
     if (!failed && recording()) {

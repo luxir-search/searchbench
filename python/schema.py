@@ -128,3 +128,18 @@ def luxir_schema(points):
     for field in NUMERIC_FIELDS:
         fields[field] = {"parent": "_" + field.rsplit("_", 1)[1], "index": "range"}
     return {**LUXIR_SCHEMA, "fields": fields}
+
+
+def luxir_vector_schema(codec="pq"):
+    """Cohere raw IP columns; PQ defaults or the declared RaBitQ variant."""
+    if codec not in ("pq", "rabitq"):
+        raise ValueError(f"unknown vector codec: {codec}")
+    return {"fields": {
+        "id": dict(LUXIR_ID_SCHEMA),
+        **{field: {"type": "text", "stored": True,
+                   "analyzer": LUXIR_ANALYZER, "long_terms": "truncate"}
+           for field in ("title", "text")},
+        "url": {"type": "string", "stored": True, "index": "none", "column": False},
+        "embedding": {"type": "vector", "dims": 1024, "metric": "ip",
+                      "ann": {} if codec == "pq" else {"codec": "rabitq"}},
+    }}

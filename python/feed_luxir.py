@@ -22,7 +22,7 @@ import time
 from adapters import make_adapter
 from http_sync import request_json, stream_request
 from schema import (NUMERIC_POINTS_SETTINGS, luxir_schema, numeric_points_setting,
-                    numeric_posture)
+                    numeric_posture, luxir_vector_schema)
 from topologies import TOPOLOGIES, assert_topology, resolve_topology
 from topology_probe import index_topology
 
@@ -31,6 +31,8 @@ ALLOW_DUPS_LINE = b'{"_update_":{"allow_dups":true}}\n'
 
 def commit_line(args, max_segments=None):
     commit = {"wait_for_merges": True}
+    if getattr(args, "vector_codec", None):
+        commit["build_aux_indexes"] = ["vec.embedding"]
     if args.optimize:
         commit["max_segments"] = 1
     elif max_segments is not None:
@@ -173,10 +175,12 @@ def feed_streams(args):
         raise failures[0]
     lines = [line for r in results for line in r]
     if args.commit:
+        commit_started = time.monotonic()
         commit = stream_request(args.host, args.port, "POST",
                                 f"/collections/{args.collection}/_update",
                                 iter([commit_line(args)]),
                                 "application/x-ndjson")
+        args.final_commit_s = time.monotonic() - commit_started
         lines += [json.loads(line) for line in commit.splitlines() if line]
     return lines
 
@@ -196,6 +200,7 @@ def main():
                         default=numeric_points_setting(),
                         help="points index on numeric fields (default: "
                              "$SEARCHBENCH_NUMERIC_POINTS, else none); see schema.py")
+    parser.add_argument("--vector-codec", choices=("pq", "rabitq"))
     parser.add_argument("--optimize", action="store_true")
     args = parser.parse_args()
     if args.streams < 1:
@@ -207,7 +212,12 @@ def main():
     numeric = numeric_posture("luxir", args.numeric_points)
     request_json(args.host, args.port, "POST",
                  f"/collections/{args.collection}/_schema",
-                 luxir_schema(numeric["points"]))
+                 luxir_vector_schema(args.vector_codec) if args.vector_codec else luxir_schema(numeric["points"]))
+    if args.vector_codec:
+        # Activate the concrete overlay name before the first ingestion merge.
+        request_json(args.host, args.port, "POST",
+                     f"/collections/{args.collection}/_update",
+                     {"commit": {"build_aux_indexes": ["vec.embedding"]}})
     started = time.monotonic()
     topology = resolve_topology(args.topology) if args.topology else None
     boundaries = None
@@ -216,7 +226,7 @@ def main():
     else:
         lines = feed_streams(args)
     elapsed = time.monotonic() - started
-    bad = [line for line in lines if line.get("status") not in (None, "ok")]
+    bad = [line for line in lines if line.get("status") not in (None, "ok") or line.get("error")]
     if bad:
         raise RuntimeError(f"Luxir update returned errors: {bad[:3]}")
     count = request_json(args.host, args.port, "POST",
@@ -225,6 +235,7 @@ def main():
     found = count.get("found") if isinstance(count, dict) else None
     print(json.dumps({"responses": lines, "count_response": count,
                       "streams": args.streams,
+                      "final_commit_s": getattr(args, "final_commit_s", None),
                       "topology": None if topology is None else {
                           "name": topology.name,
                           "segment_docs": list(topology.segment_docs),

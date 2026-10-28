@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "Cohere v3 English Wikipedia scattered 1024d",
+  "source_project": "luceneutil nightly kNN",
+  "license_notes": "Vectors and text derived from Cohere Wikipedia embedding release of English Wikipedia, as supplied by the corpus provider. Artifact hashes and byte sizes verified locally. No upstream license grant, release revision, Wikipedia dump date, or redistribution terms independently verified; Wikipedia attribution and share-alike obligations may apply.",
+  "dims": 1024,
+  "metric": "ip",
+  "files": [
+    {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.csv",
+      "source_url": "https://pub-a0911d22bca84510bc906f76af183a65.r2.dev/cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.csv",
+      "source_bytes": 472051850,
+      "source_sha256": "5ee144d8de73427ed17e80796a10bc257950a54369536bf6a882171a4974d009"
+    },
+    {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.vec",
+      "source_url": "https://pub-a0911d22bca84510bc906f76af183a65.r2.dev/cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.vec",
+      "source_bytes": 4096000000,
+      "source_sha256": "eb20462b8bd8f3a6d587ac956edfe2d8d171de129581505159c70bfbcdf268b4"
+    },
+    {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.queries.first200K.csv",
+      "source_url": "https://pub-a0911d22bca84510bc906f76af183a65.r2.dev/cohere-v3-wikipedia-en-scattered-1024d.queries.first200K.csv",
+      "source_bytes": 94145232,
+      "source_sha256": "27c46994581e34c10e4073b4738d78777fd7c9655c68e6e1cf8bb983d8e5a7aa"
+    },
+    {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.queries.first200K.vec",
+      "source_url": "https://pub-a0911d22bca84510bc906f76af183a65.r2.dev/cohere-v3-wikipedia-en-scattered-1024d.queries.first200K.vec",
+      "source_bytes": 819200000,
+      "source_sha256": "1ce48a6fa730d129abb3e1408434b0ef36849af33a3e331b2e4d424545ea3f8d"
+    }
+  ]
+}

@@ -618,6 +618,32 @@ def pivot_query_lines(results, observed, vkeys, failures):
     return lines
 
 
+def render_vector_report(out, cells, feed, merge, context):
+    """Render the vector task board separately from exact-count text tasks."""
+    lines = ['# Cohere vector workload', '',
+             'Functional smoke; timings are diagnostic only.' if context['functional_smoke'] else
+             'Luxir one-segment IP search; recall from exhaustive independent ground truth.', '',
+             f'Binary: `{context["binary"]["path"]}`',
+             f'SHA-256: `{context["binary"]["sha256"]}`', '',
+             'Feed reused: ' + str(context['feed_reused']), '']
+    if feed:
+        lines += [f'Feed: {feed["elapsed_s"]:.3f} s; '
+                  f'{feed["response"]["docs_per_s"]} docs/s; '
+                  f'final commit {feed["response"]["final_commit_s"]:.3f} s.', '']
+    lines += [f'Force-merge maintenance: {merge["elapsed_s"]:.3f} s.', '',
+              'CPU, RSS and complete vector_build counters/times are in feed.json and force-merge.json.', '',
+              '| Cell | Recall@k | QPS | p50 ms | p99 ms |',
+              '|---|---:|---:|---:|---:|']
+    for cell in cells:
+        metric = cell['metrics']
+        lines.append(f'| {cell["name"]} | {cell["recall_at_k"]:.6f} | {metric["qps"]:.2f} | '
+                     f'{metric["latency_ms"]["p50"]} | {metric["latency_ms"]["p99"]} |')
+    if not context['functional_smoke']:
+        # The shared control artifacts retain their own full provenance.
+        lines += [''] + health_control_lines(out, queries=[{**context, **cell} for cell in cells])
+    (Path(out) / 'REPORT.md').write_text('\n'.join(lines) + '\n')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("directory")
@@ -704,3 +730,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
