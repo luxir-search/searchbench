@@ -41,29 +41,15 @@ SCALE_VARIANT=$(manifest_value lanes.scale.variant)
 ARCHIVE="$CACHE/$SOURCE_FILE"
 
 verify_file() {
-  local path=$1 actual_bytes actual_sha
-  actual_bytes=$(stat -c '%s' "$path")
-  [[ "$actual_bytes" == "$SOURCE_BYTES" ]] || {
-    echo "Wikipedia archive size mismatch: expected $SOURCE_BYTES, got $actual_bytes" >&2
-    return 1
-  }
-  actual_sha=$(sha256sum "$path" | awk '{print $1}')
-  [[ "$actual_sha" == "$SOURCE_SHA256" ]] || {
-    echo "Wikipedia archive SHA-256 mismatch" >&2
-    echo "expected: $SOURCE_SHA256" >&2
-    echo "actual:   $actual_sha" >&2
-    return 1
-  }
+  PYTHONPATH="$ROOT/python" python3 - "$1" "$SOURCE_BYTES" "$SOURCE_SHA256" <<'PYVERIFY'
+import sys
+from corpus_cache import verify_file
+verify_file(sys.argv[1], int(sys.argv[2]), sys.argv[3])
+PYVERIFY
 }
 
 verify_archive() {
-  local stamp="$ARCHIVE.sha256-ok"
-  if [[ -s "$ARCHIVE" && -s "$stamp" && "$stamp" -nt "$ARCHIVE" ]] \
-      && [[ "$(cat "$stamp")" == "$SOURCE_SHA256" ]]; then
-    return
-  fi
   verify_file "$ARCHIVE"
-  printf '%s\n' "$SOURCE_SHA256" > "$stamp"
 }
 
 download_archive() {
