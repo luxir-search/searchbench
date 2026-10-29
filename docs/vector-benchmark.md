@@ -45,7 +45,8 @@ CSV is verified for provenance but is not needed by queries.
 ## Feed and maintenance
 
 The default schema leaves `ann` at its IVF+PQ defaults. `--codec rabitq`
-declares `ann: {"codec":"rabitq"}` with a separate dataset identity.
+declares `ann: {"codec":"rabitq"}`, and `--codec rabitqN` also sets
+`rabitq.bits: N` (1 to 9). Each codec has a separate dataset identity.
 No other codec/training/quantization settings are changed.
 
 After schema installation an empty commit selects the concrete overlay name
@@ -84,7 +85,12 @@ Each cell requests k=10 or k=100 and returns ids only. It runs the complete
 1,000-query prefix at concurrency 1 and the full-text default of 8, with one
 native replay thread. The default search knobs form one cell; explicit nprobe
 settings 16, 64 and 256 form the sweep. Override with `--nprobes LIST` and
-retain that declared choice in result cell identities.
+retain that declared choice in result cell identities. `--refine LIST` adds a
+`refine_candidates` axis: `default` keeps Luxir's k-derived pool, `k` pins the
+pool to k, and a count pins it to that count. A `k` cell measures codes-only
+recall, since rescoring the k returned hits only reorders them. Non-default
+cells carry an `-rf` name suffix. `--concurrency LIST` (default 1,8) selects
+the concurrency cells.
 
 Measured recall@10 for the default IVF+PQ build:
 

@@ -200,7 +200,7 @@ def main():
                         default=numeric_points_setting(),
                         help="points index on numeric fields (default: "
                              "$SEARCHBENCH_NUMERIC_POINTS, else none); see schema.py")
-    parser.add_argument("--vector-codec", choices=("pq", "rabitq"))
+    parser.add_argument("--vector-codec", help="pq, rabitq or rabitqN (N bits); see schema.py")
     parser.add_argument("--optimize", action="store_true")
     args = parser.parse_args()
     if args.streams < 1:

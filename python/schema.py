@@ -130,16 +130,26 @@ def luxir_schema(points):
     return {**LUXIR_SCHEMA, "fields": fields}
 
 
+def vector_ann(codec):
+    """pq (defaults), rabitq (default bits), or rabitqN (N bits per dimension)."""
+    if codec == "pq":
+        return {}
+    if codec == "rabitq":
+        return {"codec": "rabitq"}
+    bits = codec.removeprefix("rabitq")
+    if bits != codec and bits.isdigit() and 1 <= int(bits) <= 9:
+        return {"codec": "rabitq", "rabitq": {"bits": int(bits)}}
+    raise ValueError(f"unknown vector codec: {codec}")
+
+
 def luxir_vector_schema(codec="pq"):
-    """Cohere raw IP columns; PQ defaults or the declared RaBitQ variant."""
-    if codec not in ("pq", "rabitq"):
-        raise ValueError(f"unknown vector codec: {codec}")
+    """Cohere raw IP columns with the codec's ann settings."""
+    ann = vector_ann(codec)
     return {"fields": {
         "id": dict(LUXIR_ID_SCHEMA),
         **{field: {"type": "text", "stored": True,
                    "analyzer": LUXIR_ANALYZER, "long_terms": "truncate"}
            for field in ("title", "text")},
         "url": {"type": "string", "stored": True, "index": "none", "column": False},
-        "embedding": {"type": "vector", "dims": 1024, "metric": "ip",
-                      "ann": {} if codec == "pq" else {"codec": "rabitq"}},
+        "embedding": {"type": "vector", "dims": 1024, "metric": "ip", "ann": ann},
     }}

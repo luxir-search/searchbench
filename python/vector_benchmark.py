@@ -44,14 +44,27 @@ def main():
     parser.add_argument('--outdir', type=Path)
     parser.add_argument('--prepare', action='store_true')
     parser.add_argument('--smoke', action='store_true')
-    parser.add_argument('--codec', choices=('pq', 'rabitq'), default='pq')
+    parser.add_argument('--codec', default='pq', help='pq, rabitq or rabitqN (N bits per dimension)')
     parser.add_argument('--refeed', action='store_true')
     parser.add_argument('--duration', type=float, default=20)
     parser.add_argument('--repetitions', type=int, default=2)
     parser.add_argument('--nprobes', default='16,64,256')
+    parser.add_argument('--refine', default='default',
+                        help="refine_candidates per cell: default (Luxir's k-derived pool), k, or a count")
+    parser.add_argument('--concurrency', default='1,8')
     args = parser.parse_args()
     if args.duration <= 0 or args.repetitions < 1:
         parser.error('--duration and --repetitions must be positive')
+    try:
+        luxir_vector_schema(args.codec)
+    except ValueError as error:
+        parser.error(str(error))
+    refines = args.refine.split(',')
+    if any(r not in ('default', 'k') and not (r.isdigit() and int(r) > 0) for r in refines):
+        parser.error('--refine takes default, k or positive counts')
+    concurrencies = [int(c) for c in args.concurrency.split(',')]
+    if any(c < 1 for c in concurrencies):
+        parser.error('--concurrency must be positive')
     if not args.prepare:
         if args.outdir is None:
             parser.error('--outdir is required for runs')
@@ -176,16 +189,20 @@ def main():
         probes = [None] + [int(p) for p in args.nprobes.split(',')]
         if any(p is not None and p < 1 for p in probes):
             raise ValueError('nprobe must be positive')
-        configs = [(10, None, 1), (100, 64, 1)] if args.smoke else [
-            (k, p, c) for k in (10, 100) for p in probes for c in (1, 8)]
-        for k, probe, concurrency in configs:
-            name = f'knn-k{k}-np{probe or "default"}-c{concurrency}'
+        configs = [(10, None, 'default', 1), (100, 64, 'default', 1)] if args.smoke else [
+            (k, p, r, c) for k in (10, 100) for p in probes for r in refines for c in concurrencies]
+        for k, probe, refine, concurrency in configs:
+            refine_candidates = None if refine == 'default' else k if refine == 'k' else int(refine)
+            name = (f'knn-k{k}-np{probe or "default"}'
+                    + ('' if refine == 'default' else f'-rf{refine}') + f'-c{concurrency}')
             workload, recalls, returned = [], [], []
             posture()
             for q, vector in enumerate(queries):
                 knn = {'field': 'embedding', 'query': vector, 'k': k}
                 if probe is not None:
                     knn['ivf'] = {'nprobe': probe}
+                if refine_candidates is not None:
+                    knn['refine_candidates'] = refine_candidates
                 body = {'query': {'knn': knn}, 'limit': k, 'fields': ['id']}
                 value = request('POST', '/collections/searchbench/_search', body)
                 if value.get('error') or value.get('warnings'):
@@ -223,7 +240,8 @@ def main():
                 raise RuntimeError('index changed during queries')
             elapsed = sum(rep['elapsed_s'] for rep in raw['repetitions'])
             cell = {'created_at_utc': datetime.now(timezone.utc).isoformat(),
-                    'engine': 'luxir', 'variant': {}, 'name': name, 'k': k, 'nprobe': probe, 'concurrency': concurrency,
+                    'engine': 'luxir', 'variant': {}, 'name': name, 'k': k, 'nprobe': probe,
+                    'refine_candidates': refine_candidates, 'concurrency': concurrency,
                     'recall_at_k': statistics.mean(recalls), 'context': context_name,
                     'metrics': replay_metrics(raw['aggregate']['overall'], elapsed),
                     'memory': memory, 'request_examples': examples, 'native': raw}

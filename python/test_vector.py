@@ -18,11 +18,16 @@ from corpus_cache import verify_file, sha256
 
 class VectorTests(unittest.TestCase):
     def test_schema(self):
-        for codec in ('pq', 'rabitq'):
+        for codec in ('pq', 'rabitq', 'rabitq4'):
             schema = luxir_vector_schema(codec)['fields']
             self.assertEqual(schema['embedding']['metric'], 'ip')
             self.assertEqual(schema['embedding']['dims'], 1024)
             self.assertEqual(schema['url']['index'], 'none')
+        self.assertEqual(luxir_vector_schema('rabitq4')['fields']['embedding']['ann'],
+                         {'codec': 'rabitq', 'rabitq': {'bits': 4}})
+        for codec in ('rabitq0', 'rabitq10', 'rabitqx', 'hnsw'):
+            with self.assertRaises(ValueError):
+                luxir_vector_schema(codec)
 
     def test_reading(self):
         with tempfile.TemporaryDirectory() as directory:
