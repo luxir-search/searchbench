@@ -87,7 +87,8 @@ native replay thread. The default search knobs form one cell; explicit nprobe
 settings 16, 64 and 256 form the sweep. Override with `--nprobes LIST` and
 retain that declared choice in result cell identities. `--refine LIST` adds a
 `refine_candidates` axis: `default` keeps Luxir's k-derived pool, `k` pins the
-pool to k, and a count pins it to that count. A `k` cell measures codes-only
+pool to k, and a count pins it to that count. Counts below a cell's k are
+skipped, since Luxir clamps them up to k. A `k` cell measures codes-only
 recall, since rescoring the k returned hits only reorders them. Non-default
 cells carry an `-rf` name suffix. `--concurrency LIST` (default 1,8) selects
 the concurrency cells.

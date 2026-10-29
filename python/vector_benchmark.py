@@ -190,7 +190,8 @@ def main():
         if any(p is not None and p < 1 for p in probes):
             raise ValueError('nprobe must be positive')
         configs = [(10, None, 'default', 1), (100, 64, 'default', 1)] if args.smoke else [
-            (k, p, r, c) for k in (10, 100) for p in probes for r in refines for c in concurrencies]
+            (k, p, r, c) for k in (10, 100) for p in probes for r in refines for c in concurrencies
+            if not (r.isdigit() and int(r) < k)]
         for k, probe, refine, concurrency in configs:
             refine_candidates = None if refine == 'default' else k if refine == 'k' else int(refine)
             name = (f'knn-k{k}-np{probe or "default"}'
