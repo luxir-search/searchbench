@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "gist",
+  "dims": 960,
+  "metric": "l2",
+  "license_notes": "Source artifacts supplied by TexMex or Elastic Rally. Upstream dataset licenses, redistribution terms and underlying content attribution obligations have not been independently verified.",
+  "files": [
+    {
+      "source_file": "texmex-gist.tar.gz",
+      "source_url": "ftp://ftp.irisa.fr/local/texmex/corpus/gist.tar.gz",
+      "source_bytes": 2740172684,
+      "source_sha256": "01469a7f1c3768853525e543d537e2dfa1adece927616405e360952e3f67df73"
+    }
+  ],
+  "vectors": {
+    "docs": {
+      "source_file": "texmex-gist.tar.gz",
+      "format": "tar-fvecs",
+      "member": "gist/gist_base.fvecs"
+    },
+    "queries": {
+      "source_file": "texmex-gist.tar.gz",
+      "format": "tar-fvecs",
+      "member": "gist/gist_query.fvecs"
+    }
+  }
+}

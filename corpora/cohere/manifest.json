@@ -30,5 +30,18 @@
       "source_bytes": 819200000,
       "source_sha256": "1ce48a6fa730d129abb3e1408434b0ef36849af33a3e331b2e4d424545ea3f8d"
     }
-  ]
+  ],
+  "extra_csv": "cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.csv",
+  "vectors": {
+    "docs": {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.docs.first1M.vec",
+      "format": "raw",
+      "encoding": "f32le"
+    },
+    "queries": {
+      "source_file": "cohere-v3-wikipedia-en-scattered-1024d.queries.first200K.vec",
+      "format": "raw",
+      "encoding": "f32le"
+    }
+  }
 }

@@ -26,7 +26,7 @@ from results_io import load_result, write_context
 from sampler import ProcSampler
 from schema import luxir_vector_schema, index_layout_version
 from topology_probe import index_topology, assert_quiescent_topology
-from vector_corpus import ROOT, TOOL, prepare, recall_at_k
+from vector_datasets import ROOT, TOOL, recall_at_k, prepare, dataset_manifest, DATASETS
 
 
 def save(path, value):
@@ -40,11 +40,12 @@ def cpu(pid):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', choices=DATASETS, default='cohere')
     parser.add_argument('-s', choices=('100k', '1m'), default='100k')
     parser.add_argument('--outdir', type=Path)
     parser.add_argument('--prepare', action='store_true')
     parser.add_argument('--smoke', action='store_true')
-    parser.add_argument('--codec', default='pq', help='pq, rabitq or rabitqN (N bits per dimension)')
+    parser.add_argument('--codec', default='pq', help='pq, pq-mN (subquantizers), rabitq or rabitqN (bits per dimension)')
     parser.add_argument('--refeed', action='store_true')
     parser.add_argument('--duration', type=float, default=20)
     parser.add_argument('--repetitions', type=int, default=2)
@@ -56,7 +57,7 @@ def main():
     if args.duration <= 0 or args.repetitions < 1:
         parser.error('--duration and --repetitions must be positive')
     try:
-        luxir_vector_schema(args.codec)
+        luxir_vector_schema(args.codec, args.dataset)
     except ValueError as error:
         parser.error(str(error))
     refines = args.refine.split(',')
@@ -81,7 +82,7 @@ def main():
     rows = 10000 if args.smoke else {'100k': 100000, '1m': 1000000}[args.s]
     if not TOOL.exists():
         raise RuntimeError('build driver/build/vector_tool before preparation')
-    corpus, digest, queries, truth, truth_path = prepare(rows)
+    corpus, digest, queries, truth, truth_path = prepare(rows, dataset=args.dataset)
     if args.prepare:
         print(f'Prepared {corpus}; truth {truth_path}')
         return
@@ -90,7 +91,7 @@ def main():
     binary = Path(os.environ['LUXIR_BIN']).resolve()
     binary_info = source_file_config(binary)
     identity = {'corpus_sha256': digest, 'binary_sha256': binary_info['sha256'],
-                'schema': luxir_vector_schema(args.codec), 'layout': index_layout_version('luxir'),
+                'schema': luxir_vector_schema(args.codec, args.dataset), 'layout': index_layout_version('luxir'),
                 'feed_version': sha256(ROOT / 'python/feed_luxir.py')}
     tag = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     dataset = dataset_name(corpus) + '-' + args.codec + '-' + tag
@@ -133,7 +134,7 @@ def main():
         if not reuse:
             def ingest():
                 raw = subprocess.check_output(['python3', str(ROOT / 'python/feed_luxir.py'),
-                       str(corpus), '--vector-codec', args.codec], text=True)
+                       str(corpus), '--vector-codec', args.codec, '--vector-dataset', args.dataset], text=True)
                 value = json.loads(raw)
                 if value['count_response'].get('found') != rows:
                     raise RuntimeError('feed count mismatch')
@@ -158,7 +159,8 @@ def main():
         layout = posture()
         server_cpus, client_cpus = current_cpu_sets()
         client_cores = os.environ.get('CLIENT_CORES', format_cpu_list(client_cpus))
-        context = {'engine': 'luxir', 'workload': 'cohere-vector', 'functional_smoke': args.smoke,
+        context = {'engine': 'luxir', 'workload': args.dataset + '-vector', 'dataset': args.dataset,
+                   'dims': dataset_manifest(args.dataset)['dims'], 'metric': dataset_manifest(args.dataset)['metric'], 'functional_smoke': args.smoke,
                    'binary': binary_info, 'host': host_config(pid), 'session': server_session(pid),
                    'startup': process_startup_config('luxir', pid), 'identity': identity,
                    'index_topology': layout, 'ground_truth': source_file_config(truth_path),

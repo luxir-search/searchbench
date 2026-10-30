@@ -7,7 +7,7 @@ Preparation uses Python's standard library and a standalone C++20 numeric tool.
 
 ## Corpus and preparation
 
-The pinned source is luceneutil's scattered Cohere v3 English Wikipedia set:
+The default (`--dataset cohere`) pinned source is luceneutil's scattered Cohere v3 English Wikipedia set:
 1M document vectors and 200K query vectors, each 1024 little-endian float32
 components without a header, with corresponding RFC 4180 CSV paragraphs.
 The four URLs, byte sizes and SHA-256 values are in
@@ -26,20 +26,67 @@ analyzer, url is stored without an index or column, and embedding is a
 These vectors are approximately unit length, so cosine ranks identically to
 float32 precision; the benchmark and exact truth both use raw dot product.
 
+Additional datasets use the same prefix sizes, query protocol, and one-segment
+posture. `--dataset` selects:
+
+| id | Source | Dimensions | Metric | Document/query prefix |
+|---|---|---:|---|---|
+| cohere | luceneutil Cohere v3 English Wikipedia | 1024 | ip | 100k or 1M / 1000 |
+| sift | TexMex SIFT base/query fvecs | 128 | l2 | 100k or 1M / first 1000 of 10k |
+| gist | TexMex GIST base/query fvecs | 960 | l2 | 100k or 1M / all 1000 |
+| miracl768 | Rally Cohere MIRACL English documents-01 | 768 | cosine | first 100k or 1M / first 1000 of 2863 |
+| nq1536 | Rally OpenAI NQ ada-002 base64 corpus | 1536 | cosine | first 100k or 1M / first 1000 of 3452 |
+
+Each `corpora/<id>/manifest.json` records cache filenames, source URLs, byte
+sizes and SHA-256 pins. TexMex archives come from
+`ftp://ftp.irisa.fr/local/texmex/corpus/{sift,gist}.tar.gz`. Rally document
+sources are `https://rally-tracks.elastic.co/cohere-miracl-en-corpus-22-12/cohere-documents-01.json.bz2`
+and `https://rally-tracks.elastic.co/openai_vector/open_ai_corpus-initial-indexing_base64.json.bz2`.
+Rally queries are pinned to elastic/rally-tracks revision
+`2c4b5281ef82e5b98f291f9a16f572eed47bd0fd`, paths `cohere_vector/queries.json`
+and `openai_vector/queries.json.bz2`. File hashes pin the downloaded bytes;
+upstream dataset licenses, redistribution rights and underlying content
+attribution obligations have not been independently verified. A null pin
+marks a source not yet verified, and preparation refuses it. After adding a
+dataset and downloading its sources, `python3 python/pin_vector_sources.py
+--dataset ID` hashes the completed local files, verifies existing pins
+without replacing them, and publishes the manifest atomically; it never
+downloads.
+
+MIRACL uses cosine despite Rally declaring max_inner_product for these
+unnormalized multilingual-22-12 embeddings. Cosine reflects the intended
+user declaration and the earlier 768-dimensional measurement. Ada-002
+vectors are unit length and also declare cosine. Documents in these four
+sets contain only id and embedding. JSON sources stop after the requested
+prefix; tar streams read only the required vector members. Each manifest
+describes its document and query stream format and encoding. NQ declares
+`base64-f32be` for document vectors and `unit_norm: true` for both streams;
+the generic reader applies those declarations. All vectors
+must be finite and dimensionally valid; cosine vectors must be nonzero.
+GIST provides the high-dimensional descriptor corpus for probing unrotated
+PQ's weakness; `--codec pq-m120` gives 120 code bytes versus roughly 132
+bytes for 960-dimensional one-bit RaBitQ, while default L2 PQ caps m at 32.
+
 The numeric helper uses shortest round-tripping float32 decimals. Preparation
 streams CSV rows and vector JSON arrays without materializing the corpus in
 memory. Output is atomically published and SHA-256 checked on reuse. Corpus
-identity includes source pins, row count, transform source, and numeric helper
-source and binary hashes. Rebuild a stale helper before preparation.
+identity includes the complete manifest (including stream encoding and validation
+rules), row and query counts, transform source, and numeric helper source and
+binary hashes. All datasets use the same staged directory publication path.
+Cohere raw matrices are read in place from the verified cache, without copying
+the document or query matrix into staging. Rebuild a stale helper before preparation.
 
 Ground truth exhaustively scores the first 1,000 queries over the selected
 prefix and caches exact top-100 ids next to the corpus. It uses double
 accumulation of float32 products, descending raw inner product, and ascending
-ordinal for ties. It does not call an engine. Sixteen independent query workers
+ordinal for ties. L2 ranks ascending squared distance; cosine divides the
+double-accumulated dot product by both double-precision norms and ranks
+descending. It does not call an engine. Sixteen independent query workers
 share the document matrix (about 4.1 GB at 1M); no approximate pruning or
 quantization occurs. The computation is O(documents * queries * dimensions).
-The cache identity includes transformed corpus and complete query-source
-hashes, query count, metric, and numeric helper source/binary. The source query
+The truth identity includes transformed corpus and query-matrix hashes, query
+count, metric, and numeric helper source/binary. Complete source-file pins are
+in the preparation identity. The source query
 CSV is verified for provenance but is not needed by queries.
 
 ## Feed and maintenance
@@ -47,7 +94,8 @@ CSV is verified for provenance but is not needed by queries.
 The default schema leaves `ann` at its IVF+PQ defaults. `--codec rabitq`
 declares `ann: {"codec":"rabitq"}`, and `--codec rabitqN` also sets
 `rabitq.bits: N` (1 to 9). Each codec has a separate dataset identity.
-No other codec/training/quantization settings are changed.
+`--codec pq-mN` explicitly sets `ann.pq.m`; N must be positive and divide
+the dimensionality. No other codec/training/quantization settings are changed.
 
 After schema installation an empty commit selects the concrete overlay name
 `vec.embedding`. This activates merge-time builds before ingestion, including
@@ -144,6 +192,7 @@ network. No Luxir build or download is performed by these commands:
 cmake --build driver/build --target bench_replay vector_tool -j2
 scripts/run-vector.sh -s 100k --prepare
 scripts/run-vector.sh -s 1m --prepare
+scripts/run-vector.sh --dataset sift -s 1m --prepare
 ```
 
 For each size and binary use a separate new result directory, matching CPU,
@@ -175,7 +224,7 @@ performance results. The server is stopped and its scratch index deleted.
 ## Not yet measured
 
 Reference engines, hybrid/filter workloads, multi-segment search, updates,
-vector dimensionality/codec tuning, cache-cold search, recall confidence
+broad codec tuning, cache-cold search, recall confidence
 intervals and dataset-general ranking quality are not measured here.
 
 ## Decision log
@@ -216,3 +265,8 @@ intervals and dataset-general ranking quality are not measured here.
   provenance and control matching belong to that contract alongside
   serialization and replay, so new workloads must keep those identities
   compatible.
+
+- Stage new corpus, queries and truth in one directory and atomically rename it.
+  This avoids publishing a mixture of generations after interrupted preparation.
+  Raw Cohere matrices are read directly from the verified cache; other sources
+  use temporary document matrices removed after exact scoring.

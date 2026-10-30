@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "sift",
+  "dims": 128,
+  "metric": "l2",
+  "license_notes": "Source artifacts supplied by TexMex or Elastic Rally. Upstream dataset licenses, redistribution terms and underlying content attribution obligations have not been independently verified.",
+  "files": [
+    {
+      "source_file": "texmex-sift.tar.gz",
+      "source_url": "ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz",
+      "source_bytes": 168280445,
+      "source_sha256": "92f1270c5e3a0cb46b89983e72b0511e4df065c31a9fa0276d8c9b1fca5bc81a"
+    }
+  ],
+  "vectors": {
+    "docs": {
+      "source_file": "texmex-sift.tar.gz",
+      "format": "tar-fvecs",
+      "member": "sift/sift_base.fvecs"
+    },
+    "queries": {
+      "source_file": "texmex-sift.tar.gz",
+      "format": "tar-fvecs",
+      "member": "sift/sift_query.fvecs"
+    }
+  }
+}

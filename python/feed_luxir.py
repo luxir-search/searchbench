@@ -200,7 +200,8 @@ def main():
                         default=numeric_points_setting(),
                         help="points index on numeric fields (default: "
                              "$SEARCHBENCH_NUMERIC_POINTS, else none); see schema.py")
-    parser.add_argument("--vector-codec", help="pq, rabitq or rabitqN (N bits); see schema.py")
+    parser.add_argument("--vector-dataset", default="cohere")
+    parser.add_argument("--vector-codec", help="pq, pq-mN, rabitq or rabitqN; see schema.py")
     parser.add_argument("--optimize", action="store_true")
     args = parser.parse_args()
     if args.streams < 1:
@@ -212,7 +213,7 @@ def main():
     numeric = numeric_posture("luxir", args.numeric_points)
     request_json(args.host, args.port, "POST",
                  f"/collections/{args.collection}/_schema",
-                 luxir_vector_schema(args.vector_codec) if args.vector_codec else luxir_schema(numeric["points"]))
+                 luxir_vector_schema(args.vector_codec, args.vector_dataset) if args.vector_codec else luxir_schema(numeric["points"]))
     if args.vector_codec:
         # Activate the concrete overlay name before the first ingestion merge.
         request_json(args.host, args.port, "POST",

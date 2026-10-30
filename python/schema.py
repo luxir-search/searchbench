@@ -131,7 +131,9 @@ def luxir_schema(points):
 
 
 def vector_ann(codec):
-    """pq (defaults), rabitq (default bits), or rabitqN (N bits per dimension)."""
+    """PQ defaults/explicit m, or RaBitQ defaults/explicit bits."""
+    if codec.startswith("pq-m") and codec[4:].isdigit() and int(codec[4:]) > 0:
+        return {"codec": "pq", "pq": {"m": int(codec[4:])}}
     if codec == "pq":
         return {}
     if codec == "rabitq":
@@ -142,14 +144,21 @@ def vector_ann(codec):
     raise ValueError(f"unknown vector codec: {codec}")
 
 
-def luxir_vector_schema(codec="pq"):
-    """Cohere raw IP columns with the codec's ann settings."""
+def luxir_vector_schema(codec="pq", dataset="cohere"):
+    """Dataset columns and metric with the selected ANN codec settings."""
+    from vector_datasets import dataset_manifest
+    manifest = dataset_manifest(dataset)
     ann = vector_ann(codec)
-    return {"fields": {
+    if "pq" in ann and manifest['dims'] % ann['pq']['m']:
+        raise ValueError("PQ m must divide dimensions")
+    schema = {"fields": {
         "id": dict(LUXIR_ID_SCHEMA),
         **{field: {"type": "text", "stored": True,
                    "analyzer": LUXIR_ANALYZER, "long_terms": "truncate"}
            for field in ("title", "text")},
         "url": {"type": "string", "stored": True, "index": "none", "column": False},
-        "embedding": {"type": "vector", "dims": 1024, "metric": "ip", "ann": ann},
+        "embedding": {"type": "vector", "dims": manifest["dims"], "metric": manifest["metric"], "ann": ann},
     }}
+    if dataset != "cohere":
+        schema['fields'] = {k: v for k, v in schema['fields'].items() if k in ('id', 'embedding')}
+    return schema

@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import unittest
 from pathlib import Path
 
-from vector_corpus import TOOL, transform, vector_rows, recall_at_k
+from vector_datasets import TOOL, transform, vector_rows, recall_at_k
 from schema import luxir_vector_schema
 from adapters import LuxirVectorAdapter, make_adapter
 from driver import materialize_workload
@@ -53,14 +53,14 @@ class VectorTests(unittest.TestCase):
                 writer.writerow(['wiki_id', 'paragraph_count', 'paragraph_id', 'title', 'text', 'url'])
                 writer.writerow(['x', 1, 1, 'title, "quoted"', text, 'u'])
                 writer.writerow(['y', 1, 1, 't', 'body', 'v'])
-            transform(p / 'c', vec, p / 'o', 2, 2)
+            transform(vec, p / 'o', 2, 2, p / 'c')
             docs = [json.loads(line) for line in (p / 'o').read_text().splitlines()]
             self.assertEqual(docs[0]['text'], text)
             self.assertEqual(docs[0]['title'], 'title, "quoted"')
             self.assertEqual([d['id'] for d in docs], ['0', '1'])
             self.assertEqual(struct.pack('<4f', *(d for doc in docs for d in doc['embedding'])), raw)
             with self.assertRaises(ValueError):
-                transform(p / 'c', vec, p / 'bad', 3, 2)
+                transform(vec, p / 'bad', 3, 2, p / 'c')
 
     @unittest.skipUnless(TOOL.exists(), 'build vector_tool for numeric tests')
     def test_truth(self):

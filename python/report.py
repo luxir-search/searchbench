@@ -620,9 +620,10 @@ def pivot_query_lines(results, observed, vkeys, failures):
 
 def render_vector_report(out, cells, feed, merge, context):
     """Render the vector task board separately from exact-count text tasks."""
-    lines = ['# Cohere vector workload', '',
+    lines = [f"# {context.get('dataset', 'cohere').capitalize()} vector workload", '',
+             f"Dimensions: {context.get('dims', 1024)}; metric: {context.get('metric', 'ip')}", '',
              'Functional smoke; timings are diagnostic only.' if context['functional_smoke'] else
-             'Luxir one-segment IP search; recall from exhaustive independent ground truth.', '',
+             f"Luxir one-segment {context.get('metric', 'ip')} search; recall from exhaustive independent ground truth.", '',
              f'Binary: `{context["binary"]["path"]}`',
              f'SHA-256: `{context["binary"]["sha256"]}`', '',
              'Feed reused: ' + str(context['feed_reused']), '']

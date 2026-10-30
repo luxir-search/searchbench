@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "miracl768",
+  "dims": 768,
+  "metric": "cosine",
+  "license_notes": "Source artifacts supplied by TexMex or Elastic Rally. Upstream dataset licenses, redistribution terms and underlying content attribution obligations have not been independently verified.",
+  "files": [
+    {
+      "source_file": "rally-cohere-miracl-en-documents-01.json.bz2",
+      "source_url": "https://rally-tracks.elastic.co/cohere-miracl-en-corpus-22-12/cohere-documents-01.json.bz2",
+      "source_bytes": 18312995312,
+      "source_sha256": "993d8e918cc4860a5638c05c107a7a589edccff159dff16fcd893a97533bd373"
+    },
+    {
+      "source_file": "rally-cohere-miracl-en-queries.json",
+      "source_url": "https://raw.githubusercontent.com/elastic/rally-tracks/2c4b5281ef82e5b98f291f9a16f572eed47bd0fd/cohere_vector/queries.json",
+      "source_bytes": 45226472,
+      "source_sha256": "1345d60871dc1a83b42fe5ba2a69e787efd29995dacce43577e01ab9d5742801"
+    }
+  ],
+  "vectors": {
+    "docs": {
+      "source_file": "rally-cohere-miracl-en-documents-01.json.bz2",
+      "format": "jsonl",
+      "encoding": "json-array",
+      "field": "emb"
+    },
+    "queries": {
+      "source_file": "rally-cohere-miracl-en-queries.json",
+      "format": "jsonl",
+      "encoding": "json-array"
+    }
+  }
+}

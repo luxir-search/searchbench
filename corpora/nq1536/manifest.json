@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "nq1536",
+  "dims": 1536,
+  "metric": "cosine",
+  "license_notes": "Source artifacts supplied by TexMex or Elastic Rally. Upstream dataset licenses, redistribution terms and underlying content attribution obligations have not been independently verified.",
+  "files": [
+    {
+      "source_file": "rally-openai-nq-corpus-base64.json.bz2",
+      "source_url": "https://rally-tracks.elastic.co/openai_vector/open_ai_corpus-initial-indexing_base64.json.bz2",
+      "source_bytes": 16257545529,
+      "source_sha256": "5253d38dd55e94a9a9be3dad995e827d13f3ceb15e5ebb763451904f2c686235"
+    },
+    {
+      "source_file": "rally-openai-nq-queries.json.bz2",
+      "source_url": "https://raw.githubusercontent.com/elastic/rally-tracks/2c4b5281ef82e5b98f291f9a16f572eed47bd0fd/openai_vector/queries.json.bz2",
+      "source_bytes": 42042178,
+      "source_sha256": "6e77f01b7dcde5c3b11a51f263f847f96f64bbfd2b8e945e7795bd58037ad6c9"
+    }
+  ],
+  "vectors": {
+    "docs": {
+      "source_file": "rally-openai-nq-corpus-base64.json.bz2",
+      "format": "jsonl",
+      "encoding": "base64-f32be",
+      "field": "emb",
+      "unit_norm": true
+    },
+    "queries": {
+      "source_file": "rally-openai-nq-queries.json.bz2",
+      "format": "jsonl",
+      "encoding": "json-array",
+      "unit_norm": true
+    }
+  }
+}

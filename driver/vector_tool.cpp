@@ -39,10 +39,24 @@ int main(int argc, char** argv) try {
       }
       std::cout << line << "]\n";
     }
-  } else if (std::string(argv[1]) == "truth" && argc == 9) {
+  } else if (std::string(argv[1]) == "truth" && (argc == 9 || argc == 10)) {
     size_t nq=std::stoull(argv[6]), k=std::stoull(argv[7]), nt=std::stoull(argv[8]);
     if (!nq || !k || k>n || !nt) throw std::runtime_error("invalid truth shape");
+    std::string metric = argc == 10 ? argv[9] : "ip";
+    if (metric != "ip" && metric != "l2" && metric != "cosine") throw std::runtime_error("invalid metric");
     auto docs=read(argv[2], n*dims), queries=read(argv[5], nq*dims);
+    std::vector<double> dn(n, 1), qn(nq, 1);
+    if (metric == "cosine") {
+      auto norms = [dims](const auto& values, auto& norms) {
+        for (size_t i=0; i<norms.size(); ++i) {
+          double sum=0;
+          for (size_t d=0; d<dims; ++d) sum += double(values[i*dims+d])*values[i*dims+d];
+          if (!(sum > 0)) throw std::runtime_error("zero cosine vector");
+          norms[i]=std::sqrt(sum);
+        }
+      };
+      norms(docs,dn); norms(queries,qn);
+    }
     using Hit=std::pair<double, int>; // larger score, then smaller ordinal
     std::vector<std::vector<Hit>> hits(nq);
     std::atomic<size_t> next{0};
@@ -52,7 +66,15 @@ int main(int argc, char** argv) try {
         std::priority_queue<Hit,std::vector<Hit>,std::greater<Hit>> heap;
         for (size_t i=0; i<n; ++i) {
           double score=0;
-          for (size_t d=0; d<dims; ++d) score += double(docs[i*dims+d])*double(queries[q*dims+d]);
+          if (metric == "l2") {
+            for (size_t d=0; d<dims; ++d) {
+              double delta=double(docs[i*dims+d])-double(queries[q*dims+d]);
+              score -= delta*delta;
+            }
+          } else {
+            for (size_t d=0; d<dims; ++d) score += double(docs[i*dims+d])*double(queries[q*dims+d]);
+            if (metric == "cosine") score /= dn[i]*qn[q];
+          }
           Hit hit{score,-int(i)};
           if (heap.size()<k) heap.push(hit);
           else if (hit>heap.top()) { heap.pop(); heap.push(hit); }
